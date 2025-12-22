@@ -26,7 +26,13 @@ class Settings(BaseSettings):
     asknews_secret: Optional[str] = Field(default=None, alias="ASKNEWS_SECRET")
     exa_api_key: Optional[str] = Field(default=None, alias="EXA_API_KEY")
 
-    # Bot Configuration
+    # Langfuse Configuration
+    langfuse_secret_key: Optional[str] = Field(default=None, alias="LANGFUSE_SECRET_KEY")
+    langfuse_public_key: Optional[str] = Field(default=None, alias="LANGFUSE_PUBLIC_KEY")
+    langfuse_base_url: Optional[str] = Field(
+        default="https://us.cloud.langfuse.com",
+        alias="LANGFUSE_BASE_URL",
+    )
 
     # LLM Configuration
     llm_model: str = Field(default="gpt-4o", description="OpenAI model to use")
@@ -41,6 +47,11 @@ class Settings(BaseSettings):
         default="https://www.metaculus.com/api",
         description="Metaculus API base URL",
     )
+
+    @property
+    def langfuse_enabled(self) -> bool:
+        """Check if Langfuse tracing is enabled."""
+        return bool(self.langfuse_secret_key and self.langfuse_public_key)
 
 
 # Global settings instance

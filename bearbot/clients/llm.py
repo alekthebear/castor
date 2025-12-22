@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from typing import Optional
 
-from openai import AsyncOpenAI
+from langfuse.openai import AsyncOpenAI
 
 from bearbot.config.settings import settings
 from bearbot.exceptions import LLMError
@@ -34,12 +34,20 @@ class LLMClient:
             rate_limit or settings.concurrent_requests_limit
         )
 
-    async def call(self, prompt: str, temperature: Optional[float] = None) -> str:
+    async def call(
+        self,
+        prompt: str,
+        temperature: Optional[float] = None,
+        trace_name: Optional[str] = None,
+        trace_metadata: Optional[dict] = None,
+    ) -> str:
         """Make a streaming completion request to OpenAI's API.
 
         Args:
             prompt: The prompt to send to the LLM.
             temperature: Temperature override for this specific call.
+            trace_name: Optional name for Langfuse trace.
+            trace_metadata: Optional metadata for Langfuse trace.
 
         Returns:
             The LLM's response text.
@@ -56,6 +64,8 @@ class LLMClient:
                     messages=[{"role": "user", "content": prompt}],
                     temperature=temp,
                     stream=False,
+                    name=trace_name or "llm-call",
+                    metadata=trace_metadata or {},
                 )
                 answer = response.choices[0].message.content
                 if answer is None:

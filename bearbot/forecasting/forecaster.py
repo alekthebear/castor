@@ -5,9 +5,11 @@ from __future__ import annotations
 import asyncio
 import logging
 
+from langfuse import get_client, observe
+
 from bearbot.clients.llm import LLMClient
 from bearbot.clients.metaculus import MetaculusClient
-from bearbot.clients.research import ResearchOrchestrator
+from bearbot.research import Researcher
 from bearbot.forecasting.binary import BinaryForecaster
 from bearbot.forecasting.multiple_choice import MultipleChoiceForecaster
 from bearbot.forecasting.numeric import NumericForecaster
@@ -15,29 +17,30 @@ from bearbot.forecasting.numeric import NumericForecaster
 logger = logging.getLogger(__name__)
 
 
-class ForecastOrchestrator:
-    """Orchestrates the forecasting process for all question types."""
+class Forecaster:
+    """Forecasts a question."""
 
     def __init__(
         self,
         metaculus_client: MetaculusClient,
         llm_client: LLMClient,
-        research_orchestrator: ResearchOrchestrator,
+        researcher: Researcher,
     ):
         """Initialize the forecast orchestrator.
 
         Args:
             metaculus_client: Client for Metaculus API.
             llm_client: Client for LLM calls.
-            research_orchestrator: Orchestrator for research.
+            researcher: Researcher for research.
         """
         self.metaculus = metaculus_client
-        self.binary_forecaster = BinaryForecaster(llm_client, research_orchestrator)
-        self.numeric_forecaster = NumericForecaster(llm_client, research_orchestrator)
+        self.binary_forecaster = BinaryForecaster(llm_client, researcher)
+        self.numeric_forecaster = NumericForecaster(llm_client, researcher)
         self.multiple_choice_forecaster = MultipleChoiceForecaster(
-            llm_client, research_orchestrator
+            llm_client, researcher
         )
 
+    @observe(as_type="span", name="forecast-question")
     async def forecast_individual_question(
         self,
         question_id: int,
@@ -62,6 +65,15 @@ class ForecastOrchestrator:
         question_details = post_details["question"]
         title = question_details["title"]
         question_type = question_details["type"]
+
+        # Update Langfuse span with metadata
+        langfuse_context = get_client()
+        langfuse_context.update_current_span(
+            metadata={
+                "question_type": question_type,
+                "title": title[:100],
+            }
+        )
 
         summary_of_forecast = ""
         summary_of_forecast += (
@@ -123,6 +135,7 @@ class ForecastOrchestrator:
 
         return summary_of_forecast
 
+    @observe(as_type="span", name="forecast-batch")
     async def forecast_questions(
         self,
         open_question_id_post_id: list[tuple[int, int]],
@@ -140,13 +153,14 @@ class ForecastOrchestrator:
         """
         logger.info(f"Starting forecasting for {len(open_question_id_post_id)} questions")
 
+        # Update Langfuse trace with metadata
         forecast_tasks = [
             self.forecast_individual_question(
-                question_id,
-                post_id,
-                submit_prediction,
-                num_runs_per_question,
-                skip_previously_forecasted_questions,
+                question_id=question_id,
+                post_id=post_id,
+                submit_prediction=submit_prediction,
+                num_runs_per_question=num_runs_per_question,
+                skip_previously_forecasted_questions=skip_previously_forecasted_questions,
             )
             for question_id, post_id in open_question_id_post_id
         ]

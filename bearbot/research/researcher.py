@@ -7,13 +7,14 @@ import asyncio
 import forecasting_tools
 import requests
 from asknews_sdk import AskNewsSDK
+from langfuse import observe
 
 from bearbot.config.settings import settings
 from bearbot.exceptions import ResearchError
 
 
-class ResearchOrchestrator:
-    """Orchestrates research using available providers."""
+class Researcher:
+    """Researches a question using available providers."""
 
     def __init__(self):
         """Initialize the research orchestrator."""
@@ -30,6 +31,7 @@ class ResearchOrchestrator:
         else:
             return "none"
 
+    @observe(as_type="span", name="research")
     def research(self, question: str) -> str:
         """Conduct research on a question.
 

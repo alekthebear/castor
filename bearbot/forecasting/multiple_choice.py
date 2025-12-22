@@ -6,8 +6,10 @@ import asyncio
 import datetime
 import re
 
+from langfuse import observe
+
 from bearbot.clients.llm import LLMClient
-from bearbot.clients.research import ResearchOrchestrator
+from bearbot.research import Researcher
 from bearbot.exceptions import ParseError
 
 # Prompt template
@@ -54,17 +56,18 @@ class MultipleChoiceForecaster:
     def __init__(
         self,
         llm_client: LLMClient,
-        research_orchestrator: ResearchOrchestrator,
+        researcher: Researcher,
     ):
         """Initialize the multiple choice forecaster.
 
         Args:
             llm_client: Client for making LLM calls.
-            research_orchestrator: Orchestrator for conducting research.
+            researcher: Researcher for conducting research.
         """
         self.llm = llm_client
-        self.research = research_orchestrator
+        self.research = researcher
 
+    @observe(name="multiple-choice-forecaster", capture_input=False)
     async def forecast(
         self,
         question_details: dict,
@@ -98,10 +101,14 @@ class MultipleChoiceForecaster:
             options=options,
         )
 
-        async def ask_llm_for_multiple_choice_probabilities(
-            content: str,
+        async def ask_llm_for_multiple_choice_probabilities_with_index(
+            i: int, content: str
         ) -> tuple[dict[str, float], str]:
-            rationale = await self.llm.call(content)
+            rationale = await self.llm.call(
+                content,
+                trace_name="multiple-choice-llm-call",
+                trace_metadata={"question_type": "multiple_choice", "run": i + 1},
+            )
 
             option_probabilities = self._extract_option_probabilities(rationale, options)
 
@@ -116,7 +123,10 @@ class MultipleChoiceForecaster:
             return probability_yes_per_category, comment
 
         probability_yes_per_category_and_comment_pairs = await asyncio.gather(
-            *[ask_llm_for_multiple_choice_probabilities(content) for _ in range(num_runs)]
+            *[
+                ask_llm_for_multiple_choice_probabilities_with_index(i, content)
+                for i in range(num_runs)
+            ]
         )
         comments = [pair[1] for pair in probability_yes_per_category_and_comment_pairs]
         final_comment_sections = [

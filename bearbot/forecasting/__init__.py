@@ -3,11 +3,11 @@
 from bearbot.forecasting.binary import BinaryForecaster
 from bearbot.forecasting.multiple_choice import MultipleChoiceForecaster
 from bearbot.forecasting.numeric import NumericForecaster
-from bearbot.forecasting.orchestrator import ForecastOrchestrator
+from bearbot.forecasting.forecaster import Forecaster
 
 __all__ = [
     "BinaryForecaster",
     "NumericForecaster",
     "MultipleChoiceForecaster",
-    "ForecastOrchestrator",
+    "Forecaster",
 ]

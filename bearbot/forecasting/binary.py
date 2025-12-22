@@ -7,9 +7,10 @@ import datetime
 import re
 
 import numpy as np
+from langfuse import observe
 
 from bearbot.clients.llm import LLMClient
-from bearbot.clients.research import ResearchOrchestrator
+from bearbot.research import Researcher
 from bearbot.exceptions import ParseError
 
 # Prompt template
@@ -52,7 +53,7 @@ class BinaryForecaster:
     def __init__(
         self,
         llm_client: LLMClient,
-        research_orchestrator: ResearchOrchestrator,
+        researcher: Researcher,
     ):
         """Initialize the binary forecaster.
 
@@ -61,8 +62,9 @@ class BinaryForecaster:
             research_orchestrator: Orchestrator for conducting research.
         """
         self.llm = llm_client
-        self.research = research_orchestrator
+        self.research = researcher
 
+    @observe(name="binary-forecaster", capture_input=False)
     async def forecast(
         self, question_details: dict, num_runs: int
     ) -> tuple[float, str]:
@@ -92,8 +94,14 @@ class BinaryForecaster:
             summary_report=summary_report,
         )
 
-        async def get_rationale_and_probability(content: str) -> tuple[float, str]:
-            rationale = await self.llm.call(content)
+        async def get_rationale_and_probability_with_index(
+            i: int, content: str
+        ) -> tuple[float, str]:
+            rationale = await self.llm.call(
+                content,
+                trace_name="binary-llm-call",
+                trace_metadata={"question_type": "binary", "run": i + 1},
+            )
 
             probability = self._extract_probability(rationale)
             comment = (
@@ -103,7 +111,10 @@ class BinaryForecaster:
             return probability, comment
 
         probability_and_comment_pairs = await asyncio.gather(
-            *[get_rationale_and_probability(content) for _ in range(num_runs)]
+            *[
+                get_rationale_and_probability_with_index(i, content)
+                for i in range(num_runs)
+            ]
         )
         comments = [pair[1] for pair in probability_and_comment_pairs]
         final_comment_sections = [

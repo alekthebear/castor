@@ -5,14 +5,13 @@ from __future__ import annotations
 import argparse
 import asyncio
 
-import dotenv
+from langfuse import Langfuse
 
-from bearbot.clients import LLMClient, MetaculusClient, ResearchOrchestrator
-from bearbot.forecasting import ForecastOrchestrator
+from bearbot.clients import LLMClient, MetaculusClient
+from bearbot.research import Researcher
+from bearbot.config.settings import settings
+from bearbot.forecasting import Forecaster
 from bearbot.utils import setup_logging
-
-# Load environment variables
-dotenv.load_dotenv()
 
 
 def parse_args() -> argparse.Namespace:
@@ -62,7 +61,7 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-async def main(args: argparse.Namespace) -> None:
+async def run_forecast(args: argparse.Namespace) -> None:
     """Main function to run the forecasting bot."""
     # Setup logging
     logger = setup_logging(log_level="INFO")
@@ -72,13 +71,13 @@ async def main(args: argparse.Namespace) -> None:
     logger.info("Initializing clients...")
     metaculus_client = MetaculusClient()
     llm_client = LLMClient()
-    research_orchestrator = ResearchOrchestrator()
+    researcher = Researcher()
 
     # Initialize forecast orchestrator
-    forecast_orchestrator = ForecastOrchestrator(
+    forecaster = Forecaster(
         metaculus_client=metaculus_client,
         llm_client=llm_client,
-        research_orchestrator=research_orchestrator,
+        researcher=researcher,
     )
 
     # Get questions to forecast
@@ -123,16 +122,31 @@ async def main(args: argparse.Namespace) -> None:
         f"  - Skip previously forecasted: {skip_previously_forecasted}"
     )
 
-    await forecast_orchestrator.forecast_questions(
+    await forecaster.forecast_questions(
         open_question_id_post_id=open_question_id_post_id,
         submit_prediction=submit_prediction,
         num_runs_per_question=num_runs_per_question,
         skip_previously_forecasted_questions=skip_previously_forecasted,
     )
 
+    # Flush Langfuse traces
+    if settings.langfuse_enabled:
+        langfuse = Langfuse(
+            secret_key=settings.langfuse_secret_key,
+            public_key=settings.langfuse_public_key,
+            host=settings.langfuse_base_url,
+        )
+        langfuse.flush()
+        logger.info("Flushed Langfuse traces")
+
     logger.info("Forecasting completed successfully")
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Entry point for console script."""
     args = parse_args()
-    asyncio.run(main(args))
+    asyncio.run(run_forecast(args))
+
+
+if __name__ == "__main__":
+    main()

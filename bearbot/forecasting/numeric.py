@@ -7,9 +7,10 @@ import datetime
 import re
 
 import numpy as np
+from langfuse import observe
 
 from bearbot.clients.llm import LLMClient
-from bearbot.clients.research import ResearchOrchestrator
+from bearbot.research import Researcher
 from bearbot.exceptions import ParseError
 from bearbot.models.distribution import NumericDistribution, Percentile
 
@@ -71,17 +72,18 @@ class NumericForecaster:
     def __init__(
         self,
         llm_client: LLMClient,
-        research_orchestrator: ResearchOrchestrator,
+        researcher: Researcher,
     ):
         """Initialize the numeric forecaster.
 
         Args:
             llm_client: Client for making LLM calls.
-            research_orchestrator: Orchestrator for conducting research.
+            researcher: Researcher for conducting research.
         """
         self.llm = llm_client
-        self.research = research_orchestrator
+        self.research = researcher
 
+    @observe(name="numeric-forecaster", capture_input=False)
     async def forecast(
         self, question_details: dict, num_runs: int
     ) -> tuple[list[float], str]:
@@ -142,8 +144,14 @@ class NumericForecaster:
             units=unit_of_measure,
         )
 
-        async def ask_llm_to_get_cdf(content: str) -> tuple[list[float], str]:
-            rationale = await self.llm.call(content)
+        async def ask_llm_to_get_cdf_with_index(
+            i: int, content: str
+        ) -> tuple[list[float], str]:
+            rationale = await self.llm.call(
+                content,
+                trace_name="numeric-llm-call",
+                trace_metadata={"question_type": "numeric", "run": i + 1},
+            )
             percentile_values = self._extract_percentiles(rationale)
 
             comment = (
@@ -165,7 +173,7 @@ class NumericForecaster:
             return cdf, comment
 
         cdf_and_comment_pairs = await asyncio.gather(
-            *[ask_llm_to_get_cdf(content) for _ in range(num_runs)]
+            *[ask_llm_to_get_cdf_with_index(i, content) for i in range(num_runs)]
         )
         comments = [pair[1] for pair in cdf_and_comment_pairs]
         final_comment_sections = [
