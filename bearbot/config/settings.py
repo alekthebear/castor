@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     )
 
     # LLM Configuration
-    llm_model: str = Field(default="gpt-4o", description="OpenAI model to use")
+    llm_model: str = Field(default="gpt-5.2", description="OpenAI model to use")
     llm_temperature: float = Field(default=0.3, description="LLM temperature setting")
     concurrent_requests_limit: int = Field(
         default=5,
