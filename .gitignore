@@ -11,3 +11,6 @@ wheels/
 
 # secrets
 .env
+
+# .claude
+.claude/settings.local.json
