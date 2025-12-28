@@ -3,6 +3,11 @@ name: Run Forecast
 on:
   workflow_dispatch:
     inputs:
+      environment:
+        description: 'Environment'
+        required: true
+        default: 'prod'
+        type: environment
       mode:
         description: 'Forecast mode'
         required: true
@@ -33,6 +38,7 @@ on:
 jobs:
   forecast:
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
 
     steps:
       - name: Checkout repository
