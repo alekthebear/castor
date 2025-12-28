@@ -1,11 +1,11 @@
-"""Data models for BearBot."""
+"""Data models for Castor."""
 
-from bearbot.models.distribution import (
+from castor.models.distribution import (
     NumericDefaults,
     NumericDistribution,
     Percentile,
 )
-from bearbot.models.question import QuestionDetails
+from castor.models.question import QuestionDetails
 
 __all__ = [
     "Percentile",

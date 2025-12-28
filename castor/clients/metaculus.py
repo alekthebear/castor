@@ -7,8 +7,8 @@ from typing import Optional
 
 import requests
 
-from bearbot.config.settings import settings
-from bearbot.exceptions import MetaculusAPIError
+from castor.config.settings import settings
+from castor.exceptions import MetaculusAPIError
 
 
 class MetaculusClient:

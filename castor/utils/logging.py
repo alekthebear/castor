@@ -1,4 +1,4 @@
-"""Logging configuration for BearBot."""
+"""Logging configuration for Castor."""
 
 from __future__ import annotations
 
@@ -11,9 +11,9 @@ from typing import Optional
 def setup_logging(
     log_level: str = "INFO",
     log_file: Optional[Path] = None,
-    logger_name: str = "bearbot",
+    logger_name: str = "castor",
 ) -> logging.Logger:
-    """Configure structured logging for BearBot.
+    """Configure structured logging for Castor.
 
     Args:
         log_level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL).

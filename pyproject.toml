@@ -1,5 +1,5 @@
 [project]
-name = "bearbot"
+name = "castor"
 version = "0.1.0"
 description = "A forecasting bot for Metaculus powered by LLMs"
 readme = "README.md"
@@ -27,7 +27,7 @@ dev = [
 ]
 
 [project.scripts]
-bearbot = "bearbot.main:main"
+castor = "castor.main:main"
 
 [build-system]
 requires = ["hatchling"]

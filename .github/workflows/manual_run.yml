@@ -1,0 +1,81 @@
+name: Run Forecast
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Forecast mode'
+        required: true
+        type: choice
+        options:
+          - question
+          - tournament
+      id:
+        description: 'Question ID (int) or Tournament ID/slug'
+        required: true
+        type: string
+      submit:
+        description: 'Submit predictions to Metaculus'
+        required: false
+        type: boolean
+        default: false
+      force:
+        description: 'Force rerun even if previously forecasted'
+        required: false
+        type: boolean
+        default: false
+      num_runs:
+        description: 'Number of runs per question'
+        required: false
+        type: number
+        default: 3
+
+jobs:
+  forecast:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run forecast
+        env:
+          METACULUS_API_KEY: ${{ secrets.METACULUS_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ASKNEWS_CLIENT_ID: ${{ secrets.ASKNEWS_CLIENT_ID }}
+          ASKNEWS_CLIENT_SECRET: ${{ secrets.ASKNEWS_CLIENT_SECRET }}
+          LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
+          LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+          LANGFUSE_BASE_URL: ${{ secrets.LANGFUSE_BASE_URL }}
+        run: |
+          ARGS=""
+
+          if [ "${{ inputs.mode }}" = "question" ]; then
+            ARGS="--question ${{ inputs.id }}"
+          else
+            ARGS="--tournament ${{ inputs.id }}"
+          fi
+
+          if [ "${{ inputs.submit }}" = "true" ]; then
+            ARGS="$ARGS --submit"
+          fi
+
+          if [ "${{ inputs.force }}" = "true" ]; then
+            ARGS="$ARGS --force"
+          fi
+
+          ARGS="$ARGS --num-runs ${{ inputs.num_runs }}"
+
+          echo "Running: uv run castor $ARGS"
+          uv run castor $ARGS

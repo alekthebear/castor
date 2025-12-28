@@ -9,9 +9,9 @@ import re
 import numpy as np
 from langfuse import observe
 
-from bearbot.clients.llm import LLMClient
-from bearbot.research import Researcher
-from bearbot.exceptions import ParseError
+from castor.clients.llm import LLMClient
+from castor.research import Researcher
+from castor.exceptions import ParseError
 
 # Prompt template
 BINARY_PROMPT_TEMPLATE = """

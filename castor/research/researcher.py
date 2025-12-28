@@ -9,8 +9,8 @@ import requests
 from asknews_sdk import AskNewsSDK
 from langfuse import observe
 
-from bearbot.config.settings import settings
-from bearbot.exceptions import ResearchError
+from castor.config.settings import settings
+from castor.exceptions import ResearchError
 
 
 class Researcher:

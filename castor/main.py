@@ -1,4 +1,4 @@
-"""Main entry point for BearBot forecasting."""
+"""Main entry point for Castor forecasting."""
 
 from __future__ import annotations
 
@@ -7,17 +7,17 @@ import asyncio
 
 from langfuse import Langfuse
 
-from bearbot.clients import LLMClient, MetaculusClient
-from bearbot.research import Researcher
-from bearbot.config.settings import settings
-from bearbot.forecasting import Forecaster
-from bearbot.utils import setup_logging
+from castor.clients import LLMClient, MetaculusClient
+from castor.research import Researcher
+from castor.config.settings import settings
+from castor.forecasting import Forecaster
+from castor.utils import setup_logging
 
 
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="BearBot - Automated forecasting bot for Metaculus",
+        description="Castor - Automated forecasting bot for Metaculus",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
 
@@ -65,7 +65,7 @@ async def run_forecast(args: argparse.Namespace) -> None:
     """Main function to run the forecasting bot."""
     # Setup logging
     logger = setup_logging(log_level="INFO")
-    logger.info("Starting BearBot forecasting system")
+    logger.info("Starting Castor forecasting system")
 
     # Initialize clients
     logger.info("Initializing clients...")

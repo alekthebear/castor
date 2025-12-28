@@ -9,10 +9,10 @@ import re
 import numpy as np
 from langfuse import observe
 
-from bearbot.clients.llm import LLMClient
-from bearbot.research import Researcher
-from bearbot.exceptions import ParseError
-from bearbot.models.distribution import NumericDistribution, Percentile
+from castor.clients.llm import LLMClient
+from castor.research import Researcher
+from castor.exceptions import ParseError
+from castor.models.distribution import NumericDistribution, Percentile
 
 # Prompt template
 NUMERIC_PROMPT_TEMPLATE = """

@@ -7,8 +7,8 @@ from typing import Optional
 
 from langfuse.openai import AsyncOpenAI
 
-from bearbot.config.settings import settings
-from bearbot.exceptions import LLMError
+from castor.config.settings import settings
+from castor.exceptions import LLMError
 
 
 class LLMClient:

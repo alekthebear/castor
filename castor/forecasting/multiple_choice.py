@@ -8,9 +8,9 @@ import re
 
 from langfuse import observe
 
-from bearbot.clients.llm import LLMClient
-from bearbot.research import Researcher
-from bearbot.exceptions import ParseError
+from castor.clients.llm import LLMClient
+from castor.research import Researcher
+from castor.exceptions import ParseError
 
 # Prompt template
 MULTIPLE_CHOICE_PROMPT_TEMPLATE = """

@@ -7,12 +7,12 @@ import logging
 
 from langfuse import get_client, observe
 
-from bearbot.clients.llm import LLMClient
-from bearbot.clients.metaculus import MetaculusClient
-from bearbot.research import Researcher
-from bearbot.forecasting.binary import BinaryForecaster
-from bearbot.forecasting.multiple_choice import MultipleChoiceForecaster
-from bearbot.forecasting.numeric import NumericForecaster
+from castor.clients.llm import LLMClient
+from castor.clients.metaculus import MetaculusClient
+from castor.research import Researcher
+from castor.forecasting.binary import BinaryForecaster
+from castor.forecasting.multiple_choice import MultipleChoiceForecaster
+from castor.forecasting.numeric import NumericForecaster
 
 logger = logging.getLogger(__name__)
 
