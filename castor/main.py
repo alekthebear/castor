@@ -82,10 +82,13 @@ async def run_forecast(args: argparse.Namespace) -> None:
 
     # Get questions to forecast
     if args.question:
-        # Single question mode
-        logger.info(f"Forecasting single question ID: {args.question}")
-        # Assume question_id == post_id for single question (most common case)
-        open_question_id_post_id = [(args.question, args.question)]
+        # Single question mode - args.question is the post_id from the URL
+        post_id = args.question
+        logger.info(f"Forecasting single question ID: {post_id}")
+        # Fetch post details to get the actual question_id
+        post_details = metaculus_client.get_post_details(post_id)
+        question_id = post_details["question"]["id"]
+        open_question_id_post_id = [(question_id, post_id)]
     elif args.tournament:
         # Tournament mode
         logger.info(f"Fetching questions from tournament: {args.tournament}")
