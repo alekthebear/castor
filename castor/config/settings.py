@@ -48,6 +48,13 @@ class Settings(BaseSettings):
         description="Metaculus API base URL",
     )
 
+    # Tournament Configuration
+    forecast_window_before_close: Optional[int] = Field(
+        default=12,
+        description="Only forecast questions closing within this many hours (tournament mode only). Set to None to disable.",
+        alias="FORECAST_WINDOW_BEFORE_CLOSE",
+    )
+
     @property
     def langfuse_enabled(self) -> bool:
         """Check if Langfuse tracing is enabled."""

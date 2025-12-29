@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+from datetime import datetime, timezone
 
 from langfuse import get_client, observe
 
@@ -113,6 +114,17 @@ async def run_forecast(args: argparse.Namespace) -> None:
         if not args.force and metaculus_client.forecast_is_already_made(details):
             logger.info(f"Skipping [Question {question_id}] - already forecasted")
             continue
+        if not args.force and settings.forecast_window_before_close is not None:
+            close_time = datetime.fromisoformat(
+                question["scheduled_close_time"].replace("Z", "+00:00")
+            )
+            hours_until_close = (close_time - datetime.now(timezone.utc)).total_seconds() / 3600
+            if hours_until_close > settings.forecast_window_before_close:
+                logger.info(
+                    f"Skipping [Question {question_id}] - closes in {hours_until_close:.1f} hours "
+                    f"(window: {settings.forecast_window_before_close}h)"
+                )
+                continue
         open_question_id_post_id.append((question_id, post_id))
 
     logger.info(f"Forecasting {len(open_question_id_post_id)} questions")

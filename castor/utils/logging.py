@@ -47,4 +47,7 @@ def setup_logging(
         handlers=handlers,
     )
 
+    # Suppress noisy Streamlit cache warnings
+    logging.getLogger("streamlit.runtime.caching.cache_data_api").setLevel(logging.ERROR)
+
     return logging.getLogger(logger_name)
