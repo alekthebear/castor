@@ -47,7 +47,6 @@ class Forecaster:
         post_id: int,
         submit_prediction: bool,
         num_runs_per_question: int,
-        skip_previously_forecasted_questions: bool,
     ) -> str:
         """Forecast a single question.
 
@@ -56,7 +55,6 @@ class Forecaster:
             post_id: The post ID.
             submit_prediction: Whether to submit the prediction to Metaculus.
             num_runs_per_question: Number of runs to perform per question.
-            skip_previously_forecasted_questions: Whether to skip already forecasted questions.
 
         Returns:
             Summary string of the forecast.
@@ -84,14 +82,6 @@ class Forecaster:
         if question_type == "multiple_choice":
             options = question_details["options"]
             summary_of_forecast += f"options: {options}\n"
-
-        if (
-            self.metaculus.forecast_is_already_made(post_details)
-            and skip_previously_forecasted_questions
-        ):
-            summary_of_forecast += "Skipped: Forecast already made\n"
-            logger.info(f"Skipping question {question_id} - already forecasted")
-            return summary_of_forecast
 
         logger.info(f"Forecasting question {question_id}: {title}")
 
@@ -141,7 +131,6 @@ class Forecaster:
         open_question_id_post_id: list[tuple[int, int]],
         submit_prediction: bool,
         num_runs_per_question: int,
-        skip_previously_forecasted_questions: bool,
     ) -> None:
         """Forecast multiple questions in parallel.
 
@@ -149,9 +138,12 @@ class Forecaster:
             open_question_id_post_id: List of (question_id, post_id) tuples.
             submit_prediction: Whether to submit predictions to Metaculus.
             num_runs_per_question: Number of runs per question.
-            skip_previously_forecasted_questions: Whether to skip already forecasted questions.
         """
-        logger.info(f"Starting forecasting for {len(open_question_id_post_id)} questions")
+        logger.info(
+            f"Starting forecasting for {len(open_question_id_post_id)} questions\n"
+            f"  - Submit predictions: {submit_prediction}\n"
+            f"  - Runs per question: {num_runs_per_question}"
+        )
 
         # Update Langfuse trace with metadata
         forecast_tasks = [
@@ -160,7 +152,6 @@ class Forecaster:
                 post_id=post_id,
                 submit_prediction=submit_prediction,
                 num_runs_per_question=num_runs_per_question,
-                skip_previously_forecasted_questions=skip_previously_forecasted_questions,
             )
             for question_id, post_id in open_question_id_post_id
         ]

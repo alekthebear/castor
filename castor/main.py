@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 
-from langfuse import Langfuse
+from langfuse import get_client, observe
 
 from castor.clients import LLMClient, MetaculusClient
 from castor.research import Researcher
@@ -24,16 +24,16 @@ def parse_args() -> argparse.Namespace:
     # Question/Tournament selection (mutually exclusive)
     question_group = parser.add_mutually_exclusive_group()
     question_group.add_argument(
-        "-q",
-        "--question",
+        "-p",
+        "--post",
         type=int,
-        help="Forecast a specific question ID (mutually exclusive with --tournament)",
+        help="Forecast a specific post ID (mutually exclusive with --tournament)",
     )
     question_group.add_argument(
         "-t",
         "--tournament",
         type=str,
-        help="Forecast all questions in a tournament (ID or slug, mutually exclusive with --question)",
+        help="Forecast all questions in a tournament (ID or slug, mutually exclusive with --post)",
     )
 
     # Forecasting options
@@ -55,12 +55,13 @@ def parse_args() -> argparse.Namespace:
         "--num-runs",
         type=int,
         default=3,
-        help="Number of runs per question (default: 5)",
+        help="Number of runs per question (default: 3)",
     )
 
     return parser.parse_args()
 
 
+@observe(name="castor-run")
 async def run_forecast(args: argparse.Namespace) -> None:
     """Main function to run the forecasting bot."""
     # Setup logging
@@ -72,8 +73,6 @@ async def run_forecast(args: argparse.Namespace) -> None:
     metaculus_client = MetaculusClient()
     llm_client = LLMClient()
     researcher = Researcher()
-
-    # Initialize forecast orchestrator
     forecaster = Forecaster(
         metaculus_client=metaculus_client,
         llm_client=llm_client,
@@ -81,66 +80,59 @@ async def run_forecast(args: argparse.Namespace) -> None:
     )
 
     # Get questions to forecast
-    if args.question:
-        # Single question mode - args.question is the post_id from the URL
-        post_id = args.question
+    if args.post:
+        post_id = args.post
         logger.info(f"Forecasting single question ID: {post_id}")
-        # Fetch post details to get the actual question_id
         post_details = metaculus_client.get_post_details(post_id)
         question_id = post_details["question"]["id"]
-        open_question_id_post_id = [(question_id, post_id)]
+        questions_with_details = [(question_id, post_id, post_details)]
     elif args.tournament:
-        # Tournament mode
         logger.info(f"Fetching questions from tournament: {args.tournament}")
-        open_question_id_post_id = metaculus_client.get_open_questions_from_tournament(
-            args.tournament
-        )
-        logger.info(f"Found {len(open_question_id_post_id)} open questions")
+        open_questions = metaculus_client.get_open_questions_from_tournament(args.tournament)
+        logger.info(f"Found {len(open_questions)} open questions")
 
-        # Print question details
-        for question_id, post_id in open_question_id_post_id:
+        questions_with_details = []
+        for question_id, post_id in open_questions:
             post_details = metaculus_client.get_post_details(post_id)
             question = post_details.get("question")
-            if question:
-                logger.info(
-                    f"ID: {question['id']}\n"
-                    f"Q: {question['title']}\n"
-                    f"Closes: {question['scheduled_close_time']}"
-                )
+            if not question:
+                continue
+            questions_with_details.append((question_id, post_id, post_details))
     else:
-        # No command-line args provided - error
-        logger.error("Must specify either --question <question_id> or --tournament <tournament_id>")
+        logger.error("Must specify either --post <post_id> or --tournament <tournament_id>")
         return
+
+    # Filter out already forecasted questions
+    open_question_id_post_id = []
+    for question_id, post_id, details in questions_with_details:
+        question = details.get("question")
+        logger.info(
+            f"[Question {question_id}] {question['title']} "
+            f"(Closes: {question['scheduled_close_time']})"
+        )
+        if not args.force and metaculus_client.forecast_is_already_made(details):
+            logger.info(f"Skipping [Question {question_id}] - already forecasted")
+            continue
+        open_question_id_post_id.append((question_id, post_id))
+
+    logger.info(f"Forecasting {len(open_question_id_post_id)} questions")
 
     # Determine settings from command-line args
     submit_prediction = args.submit
     num_runs_per_question = args.num_runs
-    skip_previously_forecasted = not args.force
-
-    # Run forecasting
-    logger.info(
-        f"Starting forecasting with the following settings:\n"
-        f"  - Submit predictions: {submit_prediction}\n"
-        f"  - Runs per question: {num_runs_per_question}\n"
-        f"  - Skip previously forecasted: {skip_previously_forecasted}"
-    )
 
     await forecaster.forecast_questions(
         open_question_id_post_id=open_question_id_post_id,
         submit_prediction=submit_prediction,
         num_runs_per_question=num_runs_per_question,
-        skip_previously_forecasted_questions=skip_previously_forecasted,
     )
 
     # Flush Langfuse traces
     if settings.langfuse_enabled:
-        langfuse = Langfuse(
-            secret_key=settings.langfuse_secret_key,
-            public_key=settings.langfuse_public_key,
-            host=settings.langfuse_base_url,
-        )
-        langfuse.flush()
-        logger.info("Flushed Langfuse traces")
+        langfuse_client = get_client()
+        trace_url = langfuse_client.get_trace_url()
+        langfuse_client.flush()
+        logger.info(f"Langfuse trace: {trace_url}")
 
     logger.info("Forecasting completed successfully")
 
