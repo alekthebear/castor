@@ -68,6 +68,8 @@ class Forecaster:
         langfuse_context = get_client()
         langfuse_context.update_current_span(
             metadata={
+                "postId": post_id,
+                "questionId": question_id,
                 "question_type": question_type,
                 "title": title[:100],
             }

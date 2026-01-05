@@ -1,4 +1,4 @@
-"""LLM client for making API calls."""
+"""OpenAI LLM client implementation."""
 
 from __future__ import annotations
 
@@ -11,8 +11,8 @@ from castor.config.settings import settings
 from castor.exceptions import LLMError
 
 
-class LLMClient:
-    """Client for interacting with LLM APIs."""
+class OpenAIClient:
+    """Client for OpenAI API with Langfuse tracing."""
 
     def __init__(
         self,
@@ -20,15 +20,8 @@ class LLMClient:
         temperature: Optional[float] = None,
         rate_limit: Optional[int] = None,
     ):
-        """Initialize the LLM client.
-
-        Args:
-            model: Model name to use. If not provided, uses settings.
-            temperature: Temperature setting. If not provided, uses settings.
-            rate_limit: Max concurrent requests. If not provided, uses settings.
-        """
-        self.model = model or settings.llm_model
-        self.temperature = temperature or settings.llm_temperature
+        self.model = model or settings.openai_model
+        self.temperature = temperature if temperature is not None else settings.llm_temperature
         self.client = AsyncOpenAI(api_key=settings.openai_api_key)
         self.rate_limiter = asyncio.Semaphore(
             rate_limit or settings.concurrent_requests_limit
@@ -41,7 +34,7 @@ class LLMClient:
         trace_name: Optional[str] = None,
         trace_metadata: Optional[dict] = None,
     ) -> str:
-        """Make a streaming completion request to OpenAI's API.
+        """Make a completion request to OpenAI.
 
         Args:
             prompt: The prompt to send to the LLM.
@@ -69,7 +62,9 @@ class LLMClient:
                 )
                 answer = response.choices[0].message.content
                 if answer is None:
-                    raise LLMError("No answer returned from LLM")
+                    raise LLMError("No answer returned from OpenAI")
                 return answer
+            except LLMError:
+                raise
             except Exception as e:
-                raise LLMError(f"LLM call failed: {e}") from e
+                raise LLMError(f"OpenAI call failed: {e}") from e

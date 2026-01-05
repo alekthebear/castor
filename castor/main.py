@@ -8,11 +8,13 @@ from datetime import datetime, timezone
 
 from langfuse import get_client, observe
 
-from castor.clients import LLMClient, MetaculusClient
+from castor.clients import MetaculusClient
+from castor.clients.llm import create_llm_client
 from castor.research import Researcher
 from castor.config.settings import settings
 from castor.forecasting import Forecaster
 from castor.utils import setup_logging
+from castor.utils.telemetry import setup_otel_langfuse
 
 
 def parse_args() -> argparse.Namespace:
@@ -58,6 +60,11 @@ def parse_args() -> argparse.Namespace:
         default=3,
         help="Number of runs per question (default: 3)",
     )
+    parser.add_argument(
+        "--provider",
+        choices=["openai", "anthropic", "gemini"],
+        help="LLM provider (overrides LLM_PROVIDER env var)",
+    )
 
     return parser.parse_args()
 
@@ -69,10 +76,13 @@ async def run_forecast(args: argparse.Namespace) -> None:
     logger = setup_logging(log_level="INFO")
     logger.info("Starting Castor forecasting system")
 
+    # Setup OpenTelemetry for non-OpenAI providers
+    setup_otel_langfuse()
+
     # Initialize clients
     logger.info("Initializing clients...")
     metaculus_client = MetaculusClient()
-    llm_client = LLMClient()
+    llm_client = create_llm_client(provider=args.provider)
     researcher = Researcher()
     forecaster = Forecaster(
         metaculus_client=metaculus_client,
@@ -115,9 +125,7 @@ async def run_forecast(args: argparse.Namespace) -> None:
             logger.info(f"Skipping [Question {question_id}] - already forecasted")
             continue
         if not args.force and settings.forecast_window_before_close is not None:
-            close_time = datetime.fromisoformat(
-                question["scheduled_close_time"].replace("Z", "+00:00")
-            )
+            close_time = datetime.fromisoformat(question["scheduled_close_time"])
             hours_until_close = (close_time - datetime.now(timezone.utc)).total_seconds() / 3600
             if hours_until_close > settings.forecast_window_before_close:
                 logger.info(
