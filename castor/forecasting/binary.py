@@ -10,8 +10,8 @@ import numpy as np
 from langfuse import observe
 
 from castor.clients.llm import LLMClient
-from castor.research import Researcher
 from castor.exceptions import ParseError
+from castor.research import Researcher
 
 # Prompt template
 BINARY_PROMPT_TEMPLATE = """
@@ -24,7 +24,8 @@ Question background:
 {background}
 
 
-This question's outcome will be determined by the specific criteria below. These criteria have not yet been satisfied:
+This question's outcome will be determined by the specific criteria below. \
+These criteria have not yet been satisfied:
 {resolution_criteria}
 
 {fine_print}
@@ -41,7 +42,8 @@ Before answering you write:
 (c) A brief description of a scenario that results in a No outcome.
 (d) A brief description of a scenario that results in a Yes outcome.
 
-You write your rationale remembering that good forecasters put extra weight on the status quo outcome since the world changes slowly most of the time.
+You write your rationale remembering that good forecasters put extra weight on \
+the status quo outcome since the world changes slowly most of the time.
 
 The last thing you write is your final answer as: "Probability: ZZ%", 0-100
 """

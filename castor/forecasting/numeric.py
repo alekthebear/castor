@@ -10,9 +10,9 @@ import numpy as np
 from langfuse import observe
 
 from castor.clients.llm import LLMClient
-from castor.research import Researcher
 from castor.exceptions import ParseError
 from castor.models.distribution import NumericDistribution, Percentile
+from castor.research import Researcher
 
 # Prompt template
 NUMERIC_PROMPT_TEMPLATE = """
@@ -40,7 +40,9 @@ Today is {today}.
 
 
 Formatting Instructions:
-- CRITICAL: Your percentile values MUST be in the same numeric scale as the bounds above. If the bounds are in billions (e.g., 70,000,000,000), your answers must also be in billions, not thousands or millions.
+- CRITICAL: Your percentile values MUST be in the same numeric scale as the bounds above. \
+If the bounds are in billions (e.g., 70,000,000,000), your answers must also be in billions, \
+not thousands or millions.
 - Please notice the units requested (e.g. whether you represent a number as 1,000,000 or 1m).
 - Never use scientific notation.
 - Always start with a smaller number (more negative if negative) and then increase from there
@@ -53,7 +55,8 @@ Before answering you write:
 (e) A brief description of an unexpected scenario that results in a low outcome.
 (f) A brief description of an unexpected scenario that results in a high outcome.
 
-You remind yourself that good forecasters are humble and set wide 90/10 confidence intervals to account for unknown unkowns.
+You remind yourself that good forecasters are humble and set wide 90/10 confidence \
+intervals to account for unknown unknowns.
 
 The last thing you write is your final answer as:
 "

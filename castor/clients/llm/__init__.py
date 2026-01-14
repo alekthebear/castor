@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Optional
 
-from castor.clients.llm.base import LLMClient
-from castor.clients.llm.openai import OpenAIClient
 from castor.clients.llm.anthropic import AnthropicClient
+from castor.clients.llm.base import LLMClient
 from castor.clients.llm.gemini import GeminiClient
+from castor.clients.llm.openai import OpenAIClient
 from castor.config.settings import settings
 
 

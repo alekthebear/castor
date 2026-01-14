@@ -9,10 +9,10 @@ from langfuse import get_client, observe
 
 from castor.clients.llm import LLMClient
 from castor.clients.metaculus import MetaculusClient
-from castor.research import Researcher
 from castor.forecasting.binary import BinaryForecaster
 from castor.forecasting.multiple_choice import MultipleChoiceForecaster
 from castor.forecasting.numeric import NumericForecaster
+from castor.research import Researcher
 
 logger = logging.getLogger(__name__)
 

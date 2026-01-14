@@ -76,8 +76,9 @@ class Researcher:
                     "content": """
                 You are an assistant to a superforecaster.
                 The superforecaster will give you a question they intend to forecast on.
-                To be a great assistant, you generate a concise but detailed rundown of the most relevant news, including if the question would resolve Yes or No based on current information.
-                You do not produce forecasts yourself.
+                To be a great assistant, you generate a concise but detailed rundown of \
+the most relevant news, including if the question would resolve Yes or No based on \
+current information. You do not produce forecasts yourself.
                 """,
                 },
                 {
@@ -114,7 +115,12 @@ class Researcher:
             prioritized_highlights = highlights[:10]
             combined_highlights = ""
             for i, highlight in enumerate(prioritized_highlights):
-                combined_highlights += f'[Highlight {i+1}]:\nTitle: {highlight.source.title}\nURL: {highlight.source.url}\nText: "{highlight.highlight_text}"\n\n'
+                combined_highlights += (
+                    f"[Highlight {i+1}]:\n"
+                    f"Title: {highlight.source.title}\n"
+                    f"URL: {highlight.source.url}\n"
+                    f'Text: "{highlight.highlight_text}"\n\n'
+                )
             response = combined_highlights
         else:
             searcher = forecasting_tools.SmartSearcher(
@@ -123,10 +129,11 @@ class Researcher:
                 num_sites_per_search=10,
             )
             prompt = (
-                "You are an assistant to a superforecaster. The superforecaster will give "
-                "you a question they intend to forecast on. To be a great assistant, you generate "
-                "a concise but detailed rundown of the most relevant news, including if the question "
-                "would resolve Yes or No based on current information. You do not produce forecasts yourself."
+                "You are an assistant to a superforecaster. The superforecaster will "
+                "give you a question they intend to forecast on. To be a great "
+                "assistant, you generate a concise but detailed rundown of the most "
+                "relevant news, including if the question would resolve Yes or No "
+                "based on current information. You do not produce forecasts yourself."
                 f"\n\nThe question is: {question}"
             )
             response = asyncio.run(searcher.invoke(prompt))
@@ -175,7 +182,13 @@ class Researcher:
 
             for article in hot_articles:
                 pub_date = article["pub_date"].strftime("%B %d, %Y %I:%M %p")
-                formatted_articles += f"**{article['eng_title']}**\n{article['summary']}\nOriginal language: {article['language']}\nPublish date: {pub_date}\nSource:[{article['source_id']}]({article['article_url']})\n\n"
+                formatted_articles += (
+                    f"**{article['eng_title']}**\n"
+                    f"{article['summary']}\n"
+                    f"Original language: {article['language']}\n"
+                    f"Publish date: {pub_date}\n"
+                    f"Source:[{article['source_id']}]({article['article_url']})\n\n"
+                )
 
         if historical_articles:
             historical_articles = [article.__dict__ for article in historical_articles]
@@ -185,7 +198,13 @@ class Researcher:
 
             for article in historical_articles:
                 pub_date = article["pub_date"].strftime("%B %d, %Y %I:%M %p")
-                formatted_articles += f"**{article['eng_title']}**\n{article['summary']}\nOriginal language: {article['language']}\nPublish date: {pub_date}\nSource:[{article['source_id']}]({article['article_url']})\n\n"
+                formatted_articles += (
+                    f"**{article['eng_title']}**\n"
+                    f"{article['summary']}\n"
+                    f"Original language: {article['language']}\n"
+                    f"Publish date: {pub_date}\n"
+                    f"Source:[{article['source_id']}]({article['article_url']})\n\n"
+                )
 
         if not hot_articles and not historical_articles:
             formatted_articles += "No articles were found.\n\n"

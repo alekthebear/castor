@@ -9,8 +9,8 @@ import re
 from langfuse import observe
 
 from castor.clients.llm import LLMClient
-from castor.research import Researcher
 from castor.exceptions import ParseError
+from castor.research import Researcher
 
 # Prompt template
 MULTIPLE_CHOICE_PROMPT_TEMPLATE = """
@@ -40,7 +40,9 @@ Before answering you write:
 (b) The status quo outcome if nothing changed.
 (c) A description of an scenario that results in an unexpected outcome.
 
-You write your rationale remembering that (1) good forecasters put extra weight on the status quo outcome since the world changes slowly most of the time, and (2) good forecasters leave some moderate probability on most options to account for unexpected outcomes.
+You write your rationale remembering that (1) good forecasters put extra weight on \
+the status quo outcome since the world changes slowly most of the time, and (2) good \
+forecasters leave some moderate probability on most options to account for unexpected outcomes.
 
 The last thing you write is your final probabilities for the N options in this order {options} as:
 Option_A: Probability_A
@@ -189,11 +191,11 @@ class MultipleChoiceForecaster:
 
         option_probabilities = extract_option_probabilities(forecast_text)
 
-        NUM_OPTIONS = len(options)
+        num_options = len(options)
 
         if len(option_probabilities) > 0:
-            # return the last NUM_OPTIONS items
-            return option_probabilities[-NUM_OPTIONS:]
+            # return the last num_options items
+            return option_probabilities[-num_options:]
         else:
             raise ParseError(
                 f"Could not extract prediction from response: {forecast_text}"
@@ -218,7 +220,8 @@ class MultipleChoiceForecaster:
         # confirm that there is a probability for each option
         if len(options) != len(option_probabilities):
             raise ValueError(
-                f"Number of options ({len(options)}) does not match number of probabilities ({len(option_probabilities)})"
+                f"Number of options ({len(options)}) does not match "
+                f"number of probabilities ({len(option_probabilities)})"
             )
 
         # Ensure we are using decimals

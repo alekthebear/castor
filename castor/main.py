@@ -10,9 +10,9 @@ from langfuse import get_client, observe
 
 from castor.clients import MetaculusClient
 from castor.clients.llm import create_llm_client
-from castor.research import Researcher
 from castor.config.settings import settings
 from castor.forecasting import Forecaster
+from castor.research import Researcher
 from castor.utils import setup_logging
 from castor.utils.telemetry import setup_otel_langfuse
 
@@ -51,7 +51,7 @@ def parse_args() -> argparse.Namespace:
         "-f",
         "--force",
         action="store_true",
-        help="Rerun forecast even if previously forecasted (default: False, skip previously forecasted)",
+        help="Rerun forecast even if previously forecasted (default: False)",
     )
     parser.add_argument(
         "-n",

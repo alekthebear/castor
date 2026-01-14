@@ -38,10 +38,12 @@ class Percentile(BaseModel):
     """Represents a percentile point in a distribution."""
 
     percentile: float = Field(
-        description="A number between 0 and 1 (e.g. '90% of people are age 60 or younger' translates to '0.9')",
+        description="A number between 0 and 1 "
+        "(e.g. '90% of people are age 60 or younger' translates to '0.9')",
     )
     value: float = Field(
-        description="The number matching the percentile (e.g. '90% of people are age 60 or younger' translates to '60')",
+        description="The number matching the percentile "
+        "(e.g. '90% of people are age 60 or younger' translates to '60')",
     )
 
     @model_validator(mode="after")
@@ -109,26 +111,30 @@ class NumericDistribution(BaseModel):
         for i in range(len(percentiles) - 1):
             if abs(percentiles[i + 1].percentile - percentiles[i].percentile) < 5e-05:
                 raise ValueError(
-                    f"Percentiles at indices {i} and {i+1} are too close. CDF must be increasing by at least 5e-05 at every step. "
+                    f"Percentiles at indices {i} and {i+1} are too close. "
+                    f"CDF must be increasing by at least 5e-05 at every step. "
                     f"{percentiles[i].percentile} and {percentiles[i+1].percentile} "
                     f"at values {percentiles[i].value} and {percentiles[i+1].value}. "
-                    "One possible reason is that your prediction is mostly or completely out of the upper/lower "
-                    "bound range thus assigning very little probability to any one x-axis value."
+                    "One possible reason is that your prediction is mostly or completely "
+                    "out of the upper/lower bound range thus assigning very little "
+                    "probability to any one x-axis value."
                 )
 
     def _check_log_scaled_fields(self) -> None:
         """Check that log-scaled fields are valid."""
         if self.zero_point is not None and self.lower_bound <= self.zero_point:
             raise ValueError(
-                f"Lower bound {self.lower_bound} is less than or equal to the zero point {self.zero_point}. "
+                f"Lower bound {self.lower_bound} is less than or equal to the "
+                f"zero point {self.zero_point}. "
                 "Lower bound must be greater than the zero point."
             )
 
         for percentile in self.declared_percentiles:
             if self.zero_point is not None and percentile.value < self.zero_point:
                 raise ValueError(
-                    f"Percentile value {percentile.value} is less than the zero point {self.zero_point}. "
-                    "Determining probability less than zero point is currently not supported."
+                    f"Percentile value {percentile.value} is less than the "
+                    f"zero point {self.zero_point}. "
+                    "Determining probability less than zero point is not supported."
                 )
 
     def _check_and_update_repeating_values(
@@ -148,7 +154,8 @@ class NumericDistribution(BaseModel):
             if not repeated_value:
                 final_percentiles.append(percentile)
             elif value_in_bounds:
-                greater_epsilon = 1e-6  # TODO: Figure out why normal epsilon doesn't work. Could cause brittle behavior.
+                # TODO: Figure out why normal epsilon doesn't work. Could be brittle.
+                greater_epsilon = 1e-6
                 modification = (1 - percentile.percentile) * greater_epsilon
                 final_percentiles.append(
                     Percentile(
@@ -174,7 +181,8 @@ class NumericDistribution(BaseModel):
                 )
             else:
                 raise ValueError(
-                    f"Unexpected state: value {value} is repeated {count} times. Bound is {self.lower_bound} and {self.upper_bound}"
+                    f"Unexpected state: value {value} is repeated {count} times. "
+                    f"Bound is {self.lower_bound} and {self.upper_bound}"
                 )
         return final_percentiles
 
@@ -182,7 +190,7 @@ class NumericDistribution(BaseModel):
         """Check that percentiles are not too far from bounds."""
         max_to_min_range = self.upper_bound - self.lower_bound
 
-        # TODO: Better handle log scaled questions (a fixed wiggle room percentage doesn't work well for them)
+        # TODO: Better handle log scaled questions (fixed wiggle room % doesn't work)
         wiggle_percent = 0.25
         wiggle_room = max_to_min_range * wiggle_percent
         upper_bound_plus_wiggle_room = self.upper_bound + wiggle_room
@@ -196,7 +204,8 @@ class NumericDistribution(BaseModel):
         ]
         if len(percentiles_within_bounds_plus_wiggle_room) == 0:
             raise ValueError(
-                f"No declared percentiles are within the range of the question +/- {wiggle_percent * 100}%. "
+                f"No declared percentiles are within the range of the question "
+                f"+/- {wiggle_percent * 100}%. "
                 f"Lower bound: {self.lower_bound}, upper bound: {self.upper_bound}. "
                 f"Percentiles: {percentiles}"
             )
@@ -219,7 +228,8 @@ class NumericDistribution(BaseModel):
         """Check that distribution is not too concentrated."""
         if len(cdf) != self.cdf_size:
             raise ValueError(
-                f"CDF size is not the same as the declared percentiles. CDF size: {len(cdf)}, declared percentiles: {self.cdf_size}"
+                f"CDF size is not the same as the declared percentiles. "
+                f"CDF size: {len(cdf)}, declared percentiles: {self.cdf_size}"
             )
         cap = NumericDefaults.get_max_pmf_value(len(cdf), include_wiggle_room=False)
 
@@ -234,25 +244,29 @@ class NumericDistribution(BaseModel):
 
     def get_cdf(self) -> list[Percentile]:
         """
-        Turns a list of percentiles into a full distribution (201 points, if numeric, otherwise based on discrete values)
-        between upper and lower bound (taking into account probability assigned above and below the bounds)
-        that is compatible with Metaculus questions.
+        Turns a list of percentiles into a full distribution (201 points, if numeric,
+        otherwise based on discrete values) between upper and lower bound (taking into
+        account probability assigned above and below the bounds) that is compatible
+        with Metaculus questions.
 
         cdf stands for 'continuous distribution function'
 
         At Metaculus CDFs are often represented with 201 points. Each point has:
-        - percentile ("X% of values are below this point". This is the y axis of the cdf graph)
-        - 'value' or 'nominal location' (The real world number that answers the question)
-        - cdf location (a number between 0 and 1 representing where the point is on the cdf x axis, where 0 is range min, and 1 is range max)
+        - percentile ("X% of values are below this point". This is the y axis of the
+          cdf graph)
+        - 'value' or 'nominal location' (The real world number that answers the
+          question)
+        - cdf location (a number between 0 and 1 representing where the point is on
+          the cdf x axis, where 0 is range min, and 1 is range max)
         """
 
         cdf_size = self.cdf_size or NumericDefaults.DEFAULT_CDF_SIZE
         continuous_cdf = []
         cdf_xaxis = []
         cdf_eval_locations = [i / (cdf_size - 1) for i in range(cdf_size)]
-        for l in cdf_eval_locations:
-            continuous_cdf.append(self._get_cdf_at(l))
-            cdf_xaxis.append(self._cdf_location_to_nominal_location(l))
+        for loc in cdf_eval_locations:
+            continuous_cdf.append(self._get_cdf_at(loc))
+            cdf_xaxis.append(self._cdf_location_to_nominal_location(loc))
 
         if self.standardize_cdf:
             continuous_cdf = self._standardize_cdf(continuous_cdf)
@@ -369,7 +383,7 @@ class NumericDistribution(BaseModel):
             # logarithmically scaled question
             deriv_ratio = (range_max - zero_point) / (range_min - zero_point)
             if nominal_value == zero_point:
-                # If nominal = zero point, then you would take the log of 0. Add a small epsilon to avoid this.
+                # If nominal = zero point, you would take log of 0. Add epsilon.
                 nominal_value += 1e-10
             unscaled_location = (
                 np.log(
@@ -434,18 +448,18 @@ class NumericDistribution(BaseModel):
         scale_upper_to = 1.0 if upper_open else cdf[-1]
         rescaled_inbound_mass = scale_upper_to - scale_lower_to
 
-        def apply_minimum(F: float, location: float) -> float:
-            # `F` is the height of the cdf at `location` (in range [0, 1])
+        def apply_minimum(cdf_height: float, location: float) -> float:
+            # `cdf_height` is the height of the cdf at `location` (in range [0, 1])
             # rescale
-            rescaled_F = (F - scale_lower_to) / rescaled_inbound_mass
+            rescaled_height = (cdf_height - scale_lower_to) / rescaled_inbound_mass
             # offset
             if lower_open and upper_open:
-                return 0.988 * rescaled_F + 0.01 * location + 0.001
+                return 0.988 * rescaled_height + 0.01 * location + 0.001
             elif lower_open:
-                return 0.989 * rescaled_F + 0.01 * location + 0.001
+                return 0.989 * rescaled_height + 0.01 * location + 0.001
             elif upper_open:
-                return 0.989 * rescaled_F + 0.01 * location
-            return 0.99 * rescaled_F + 0.01 * location
+                return 0.989 * rescaled_height + 0.01 * location
+            return 0.99 * rescaled_height + 0.01 * location
 
         for i, value in enumerate(cdf):
             cdf[i] = apply_minimum(value, i / (len(cdf) - 1))

@@ -67,7 +67,8 @@ class Settings(BaseSettings):
     # Tournament Configuration
     forecast_window_before_close: Optional[int] = Field(
         default=12,
-        description="Only forecast questions closing within this many hours (tournament mode only). Set to None to disable.",
+        description="Only forecast questions closing within this many hours "
+        "(tournament mode only). Set to None to disable.",
         alias="FORECAST_WINDOW_BEFORE_CLOSE",
     )
 
