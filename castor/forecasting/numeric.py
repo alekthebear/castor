@@ -40,6 +40,7 @@ Today is {today}.
 
 
 Formatting Instructions:
+- CRITICAL: Your percentile values MUST be in the same numeric scale as the bounds above. If the bounds are in billions (e.g., 70,000,000,000), your answers must also be in billions, not thousands or millions.
 - Please notice the units requested (e.g. whether you represent a number as 1,000,000 or 1m).
 - Never use scientific notation.
 - Always start with a smaller number (more negative if negative) and then increase from there
@@ -84,9 +85,7 @@ class NumericForecaster:
         self.research = researcher
 
     @observe(name="numeric-forecaster", capture_input=False)
-    async def forecast(
-        self, question_details: dict, num_runs: int
-    ) -> tuple[list[float], str]:
+    async def forecast(self, question_details: dict, num_runs: int) -> tuple[list[float], str]:
         """Generate a numeric/discrete forecast.
 
         Args:
@@ -120,15 +119,19 @@ class NumericForecaster:
         else:
             cdf_size = 201
 
-        # Create messages about the bounds
-        if open_upper_bound:
-            upper_bound_message = ""
-        else:
-            upper_bound_message = f"The outcome can not be higher than {upper_bound}."
+        # Create messages about the bounds - always show bounds for scale reference
         if open_lower_bound:
-            lower_bound_message = ""
+            lower_bound_message = (
+                f"The question's lower bound is {lower_bound} (open - values below are possible)."
+            )
         else:
             lower_bound_message = f"The outcome can not be lower than {lower_bound}."
+        if open_upper_bound:
+            upper_bound_message = (
+                f"The question's upper bound is {upper_bound} (open - values above are possible)."
+            )
+        else:
+            upper_bound_message = f"The outcome can not be higher than {upper_bound}."
 
         summary_report = self.research.research(title)
 
@@ -144,9 +147,7 @@ class NumericForecaster:
             units=unit_of_measure,
         )
 
-        async def ask_llm_to_get_cdf_with_index(
-            i: int, content: str
-        ) -> tuple[list[float], str]:
+        async def ask_llm_to_get_cdf_with_index(i: int, content: str) -> tuple[list[float], str]:
             rationale = await self.llm.call(
                 content,
                 trace_name="numeric-llm-call",
@@ -177,7 +178,7 @@ class NumericForecaster:
         )
         comments = [pair[1] for pair in cdf_and_comment_pairs]
         final_comment_sections = [
-            f"## Rationale {i+1}\n{comment}" for i, comment in enumerate(comments)
+            f"## Rationale {i + 1}\n{comment}" for i, comment in enumerate(comments)
         ]
         cdfs: list[list[float]] = [pair[0] for pair in cdf_and_comment_pairs]
         all_cdfs = np.array(cdfs)
@@ -213,12 +214,9 @@ class NumericForecaster:
                 if re.match(pattern, line):
                     numbers = re.findall(number_pattern, line)
                     numbers_no_commas = [
-                        next(num for num in match if num).replace(",", "")
-                        for match in numbers
+                        next(num for num in match if num).replace(",", "") for match in numbers
                     ]
-                    numbers = [
-                        float(num) if "." in num else int(num) for num in numbers_no_commas
-                    ]
+                    numbers = [float(num) if "." in num else int(num) for num in numbers_no_commas]
                     if len(numbers) > 1:
                         first_number = numbers[0]
                         last_number = numbers[-1]
@@ -240,9 +238,7 @@ class NumericForecaster:
         if len(percentile_values) > 0:
             return percentile_values
         else:
-            raise ParseError(
-                f"Could not extract prediction from response: {forecast_text}"
-            )
+            raise ParseError(f"Could not extract prediction from response: {forecast_text}")
 
     @staticmethod
     def _generate_continuous_cdf(
