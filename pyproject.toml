@@ -16,9 +16,10 @@ dependencies = [
     "asknews>=0.13.0",
     "langfuse>=3.0.0",
     "numpy>=1.24.0",
-    # OpenTelemetry for Langfuse integration with Anthropic/Gemini
+    # OpenTelemetry for Langfuse integration
     "opentelemetry-sdk>=1.20.0",
     "opentelemetry-exporter-otlp>=1.20.0",
+    "openinference-instrumentation-openai>=0.1.0",
     "openinference-instrumentation-anthropic>=0.1.0",
     "openinference-instrumentation-google-genai>=0.1.0",
 ]

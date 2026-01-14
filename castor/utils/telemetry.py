@@ -51,6 +51,14 @@ def setup_otel_langfuse() -> None:
     provider.add_span_processor(SimpleSpanProcessor(exporter))
     trace.set_tracer_provider(provider)
 
+    # Instrument OpenAI if available
+    try:
+        from openinference.instrumentation.openai import OpenAIInstrumentor
+        OpenAIInstrumentor().instrument()
+        logger.debug("OpenAI instrumentation enabled")
+    except ImportError:
+        pass
+
     # Instrument Anthropic if available
     try:
         from openinference.instrumentation.anthropic import AnthropicInstrumentor

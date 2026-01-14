@@ -5,23 +5,25 @@ from __future__ import annotations
 import asyncio
 from typing import Optional
 
-from langfuse.openai import AsyncOpenAI
+from openai import AsyncOpenAI
 
 from castor.config.settings import settings
 from castor.exceptions import LLMError
 
 
 class OpenAIClient:
-    """Client for OpenAI API with Langfuse tracing."""
+    """Client for OpenAI API with OpenTelemetry tracing."""
 
     def __init__(
         self,
         model: Optional[str] = None,
         temperature: Optional[float] = None,
         rate_limit: Optional[int] = None,
+        reasoning: Optional[bool] = None,
     ):
         self.model = model or settings.openai_model
         self.temperature = temperature if temperature is not None else settings.llm_temperature
+        self.reasoning = reasoning if reasoning is not None else settings.llm_reasoning
         self.client = AsyncOpenAI(api_key=settings.openai_api_key)
         self.rate_limiter = asyncio.Semaphore(
             rate_limit or settings.concurrent_requests_limit
@@ -39,8 +41,8 @@ class OpenAIClient:
         Args:
             prompt: The prompt to send to the LLM.
             temperature: Temperature override for this specific call.
-            trace_name: Optional name for Langfuse trace.
-            trace_metadata: Optional metadata for Langfuse trace.
+            trace_name: Optional name for Langfuse trace (used via OTel).
+            trace_metadata: Optional metadata for Langfuse trace (used via OTel).
 
         Returns:
             The LLM's response text.
@@ -52,14 +54,19 @@ class OpenAIClient:
 
         async with self.rate_limiter:
             try:
-                response = await self.client.chat.completions.create(
-                    model=self.model,
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=temp,
-                    stream=False,
-                    name=trace_name or "llm-call",
-                    metadata=trace_metadata or {},
-                )
+                # Build request parameters
+                params: dict = {
+                    "model": self.model,
+                    "messages": [{"role": "user", "content": prompt}],
+                }
+
+                if self.reasoning:
+                    # GPT-5 reasoning: use "medium" effort level
+                    params["reasoning_effort"] = "medium"
+                else:
+                    params["temperature"] = temp
+
+                response = await self.client.chat.completions.create(**params)
                 answer = response.choices[0].message.content
                 if answer is None:
                     raise LLMError("No answer returned from OpenAI")

@@ -43,8 +43,13 @@ class Settings(BaseSettings):
         alias="LLM_PROVIDER",
     )
     llm_temperature: float = Field(default=0.3, description="LLM temperature setting")
+    llm_reasoning: bool = Field(
+        default=True,
+        description="Enable extended thinking/reasoning for LLM calls",
+        alias="LLM_REASONING",
+    )
     concurrent_requests_limit: int = Field(
-        default=1,
+        default=5,
         description="Maximum concurrent LLM requests",
     )
 
