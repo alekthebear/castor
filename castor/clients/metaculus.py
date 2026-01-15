@@ -45,7 +45,7 @@ class MetaculusClient:
                 f"Failed to get post {post_id}: {response.status_code} {response.text}"
             )
 
-        return json.loads(response.content)  # type: ignore[return-value]
+        return json.loads(response.content)  # type: ignore[no-any-return]
 
     def list_posts_from_tournament(
         self,
@@ -91,7 +91,7 @@ class MetaculusClient:
                 f"{response.status_code} {response.text}"
             )
 
-        return json.loads(response.content)  # type: ignore[return-value]
+        return json.loads(response.content)  # type: ignore[no-any-return]
 
     def get_open_questions_from_tournament(
         self, tournament_id: int | str

@@ -17,8 +17,9 @@ uv run castor --tournament <id> --submit --num-runs 5
 uv run castor --post <id> --submit
 uv run castor --post <id> --provider anthropic  # Override LLM provider
 
-# Linting
+# Linting and type checking
 uv run ruff check castor
+uv run mypy castor
 ```
 
 ## Architecture

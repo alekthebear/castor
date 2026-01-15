@@ -499,7 +499,7 @@ class NumericDistribution(BaseModel):
 
         # round to minimize floating point errors
         cdf = np.round(cdf, 10)
-        return cdf.tolist()  # type: ignore[return-value]
+        return cdf.tolist()  # type: ignore[no-any-return]
 
     def _cdf_location_to_nominal_location(self, cdf_location: float) -> float:
         """Convert CDF location to nominal (real-world) value."""
