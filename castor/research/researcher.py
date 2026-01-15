@@ -93,7 +93,7 @@ current information. You do not produce forecasts yourself.
                 f"Perplexity API call failed: {response.status_code} {response.text}"
             )
         content = response.json()["choices"][0]["message"]["content"]
-        return content
+        return str(content)
 
     def _call_exa_smart_searcher(self, question: str) -> str:
         """Use Exa to research a question.
@@ -172,31 +172,16 @@ current information. You do not produce forecasts yourself.
             strategy="news knowledge",
         )
 
-        hot_articles = hot_response.as_dicts
-        historical_articles = historical_response.as_dicts
         formatted_articles = "Here are the relevant news articles:\n\n"
 
-        if hot_articles:
-            hot_articles = [article.__dict__ for article in hot_articles]
-            hot_articles = sorted(hot_articles, key=lambda x: x["pub_date"], reverse=True)
-
-            for article in hot_articles:
-                pub_date = article["pub_date"].strftime("%B %d, %Y %I:%M %p")
-                formatted_articles += (
-                    f"**{article['eng_title']}**\n"
-                    f"{article['summary']}\n"
-                    f"Original language: {article['language']}\n"
-                    f"Publish date: {pub_date}\n"
-                    f"Source:[{article['source_id']}]({article['article_url']})\n\n"
-                )
-
-        if historical_articles:
-            historical_articles = [article.__dict__ for article in historical_articles]
-            historical_articles = sorted(
-                historical_articles, key=lambda x: x["pub_date"], reverse=True
+        hot_article_dicts: list[dict] = []
+        if hot_response.as_dicts:
+            hot_article_dicts = [article.__dict__ for article in hot_response.as_dicts]
+            hot_article_dicts = sorted(
+                hot_article_dicts, key=lambda x: x["pub_date"], reverse=True
             )
 
-            for article in historical_articles:
+            for article in hot_article_dicts:
                 pub_date = article["pub_date"].strftime("%B %d, %Y %I:%M %p")
                 formatted_articles += (
                     f"**{article['eng_title']}**\n"
@@ -206,7 +191,26 @@ current information. You do not produce forecasts yourself.
                     f"Source:[{article['source_id']}]({article['article_url']})\n\n"
                 )
 
-        if not hot_articles and not historical_articles:
+        historical_article_dicts: list[dict] = []
+        if historical_response.as_dicts:
+            historical_article_dicts = [
+                article.__dict__ for article in historical_response.as_dicts
+            ]
+            historical_article_dicts = sorted(
+                historical_article_dicts, key=lambda x: x["pub_date"], reverse=True
+            )
+
+            for article in historical_article_dicts:
+                pub_date = article["pub_date"].strftime("%B %d, %Y %I:%M %p")
+                formatted_articles += (
+                    f"**{article['eng_title']}**\n"
+                    f"{article['summary']}\n"
+                    f"Original language: {article['language']}\n"
+                    f"Publish date: {pub_date}\n"
+                    f"Source:[{article['source_id']}]({article['article_url']})\n\n"
+                )
+
+        if not hot_article_dicts and not historical_article_dicts:
             formatted_articles += "No articles were found.\n\n"
             return formatted_articles
 

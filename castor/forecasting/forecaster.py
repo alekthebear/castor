@@ -88,6 +88,8 @@ class Forecaster:
         logger.info(f"Forecasting question {question_id}: {title}")
 
         # Generate forecast based on question type
+        forecast: float | list[float] | dict[str, float]
+        comment: str
         if question_type == "binary":
             forecast, comment = await self.binary_forecaster.forecast(
                 question_details, num_runs_per_question

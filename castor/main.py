@@ -117,6 +117,9 @@ async def run_forecast(args: argparse.Namespace) -> None:
     open_question_id_post_id = []
     for question_id, post_id, details in questions_with_details:
         question = details.get("question")
+        if not question:
+            logger.warning(f"[Post {post_id}] Question {question_id} has no question data")
+            continue
         logger.info(
             f"[Question {question_id}] {question['title']} "
             f"(Closes: {question['scheduled_close_time']})"

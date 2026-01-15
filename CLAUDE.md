@@ -18,7 +18,7 @@ uv run castor --post <id> --submit
 uv run castor --post <id> --provider anthropic  # Override LLM provider
 
 # Linting
-ruff check castor
+uv run ruff check castor
 ```
 
 ## Architecture

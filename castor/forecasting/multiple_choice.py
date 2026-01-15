@@ -195,7 +195,7 @@ class MultipleChoiceForecaster:
 
         if len(option_probabilities) > 0:
             # return the last num_options items
-            return option_probabilities[-num_options:]
+            return list(option_probabilities[-num_options:])
         else:
             raise ParseError(
                 f"Could not extract prediction from response: {forecast_text}"

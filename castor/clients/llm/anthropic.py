@@ -78,7 +78,7 @@ class AnthropicClient:
                 # Extract text from response (skip thinking blocks)
                 for block in response.content:
                     if block.type == "text":
-                        return block.text
+                        return str(block.text)
 
                 raise LLMError("No text content returned from Anthropic")
             except LLMError:

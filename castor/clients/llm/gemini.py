@@ -58,7 +58,7 @@ class GeminiClient:
                     # Gemini 3 Pro: use "high" thinking level (medium only for Flash)
                     config = types.GenerateContentConfig(
                         thinking_config=types.ThinkingConfig(
-                            thinking_level="HIGH", include_thoughts=True
+                            thinking_level=types.ThinkingLevel.HIGH, include_thoughts=True
                         )
                     )
                 else:

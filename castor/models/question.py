@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 
 class QuestionDetails:
@@ -26,32 +26,32 @@ class QuestionDetails:
     @property
     def id(self) -> int:
         """Question ID."""
-        return self._data["id"]
+        return cast(int, self._data["id"])
 
     @property
     def title(self) -> str:
         """Question title."""
-        return self._data["title"]
+        return cast(str, self._data["title"])
 
     @property
     def type(self) -> str:
         """Question type (binary, numeric, discrete, multiple_choice)."""
-        return self._data["type"]
+        return cast(str, self._data["type"])
 
     @property
     def description(self) -> str:
         """Question description/background."""
-        return self._data.get("description", "")
+        return cast(str, self._data.get("description", ""))
 
     @property
     def resolution_criteria(self) -> str:
         """Resolution criteria."""
-        return self._data.get("resolution_criteria", "")
+        return cast(str, self._data.get("resolution_criteria", ""))
 
     @property
     def fine_print(self) -> str:
         """Fine print."""
-        return self._data.get("fine_print", "")
+        return cast(str, self._data.get("fine_print", ""))
 
     def to_dict(self) -> dict[str, Any]:
         """Return underlying dictionary."""

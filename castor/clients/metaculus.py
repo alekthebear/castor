@@ -45,7 +45,7 @@ class MetaculusClient:
                 f"Failed to get post {post_id}: {response.status_code} {response.text}"
             )
 
-        return json.loads(response.content)
+        return json.loads(response.content)  # type: ignore[return-value]
 
     def list_posts_from_tournament(
         self,
@@ -66,7 +66,7 @@ class MetaculusClient:
         Raises:
             MetaculusAPIError: If the API request fails.
         """
-        url_qparams = {
+        url_qparams: dict[str, str | int | list[int | str]] = {
             "limit": count,
             "offset": offset,
             "order_by": "-hotness",
@@ -91,7 +91,7 @@ class MetaculusClient:
                 f"{response.status_code} {response.text}"
             )
 
-        return json.loads(response.content)
+        return json.loads(response.content)  # type: ignore[return-value]
 
     def get_open_questions_from_tournament(
         self, tournament_id: int | str

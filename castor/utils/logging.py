@@ -28,7 +28,7 @@ def setup_logging(
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    handlers = []
+    handlers: list[logging.Handler] = []
 
     # Console handler
     console_handler = logging.StreamHandler(sys.stdout)

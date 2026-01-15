@@ -70,7 +70,7 @@ class OpenAIClient:
                 answer = response.choices[0].message.content
                 if answer is None:
                     raise LLMError("No answer returned from OpenAI")
-                return answer
+                return str(answer)
             except LLMError:
                 raise
             except Exception as e:
