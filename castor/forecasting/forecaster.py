@@ -129,12 +129,13 @@ class Forecaster:
 
         return summary_of_forecast
 
-    @observe(as_type="span", name="forecast-batch")
+    @observe(name="forecast-batch")
     async def forecast_questions(
         self,
         open_question_id_post_id: list[tuple[int, int]],
         submit_prediction: bool,
         num_runs_per_question: int,
+        tournament_id: str | None = None,
     ) -> None:
         """Forecast multiple questions in parallel.
 
@@ -142,6 +143,7 @@ class Forecaster:
             open_question_id_post_id: List of (question_id, post_id) tuples.
             submit_prediction: Whether to submit predictions to Metaculus.
             num_runs_per_question: Number of runs per question.
+            tournament_id: Optional tournament ID/slug for trace metadata.
         """
         logger.info(
             f"Starting forecasting for {len(open_question_id_post_id)} questions\n"
@@ -150,6 +152,12 @@ class Forecaster:
         )
 
         # Update Langfuse trace with metadata
+        if tournament_id:
+            langfuse_client = get_client()
+            langfuse_client.update_current_span(
+                metadata={"tournament_id": tournament_id}
+            )
+
         forecast_tasks = [
             self.forecast_individual_question(
                 question_id=question_id,

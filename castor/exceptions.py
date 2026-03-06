@@ -1,39 +1,39 @@
-"""Custom exceptions for BearBot."""
+"""Custom exceptions for Castor."""
 
 from __future__ import annotations
 
 
-class BearBotError(Exception):
-    """Base exception for all BearBot errors."""
+class CastorError(Exception):
+    """Base exception for all Castor errors."""
 
     pass
 
 
-class MetaculusAPIError(BearBotError):
+class MetaculusAPIError(CastorError):
     """Error communicating with Metaculus API."""
 
     pass
 
 
-class ResearchError(BearBotError):
+class ResearchError(CastorError):
     """Error during research phase."""
 
     pass
 
 
-class LLMError(BearBotError):
+class LLMError(CastorError):
     """Error calling LLM."""
 
     pass
 
 
-class ParseError(BearBotError):
+class ParseError(CastorError):
     """Error parsing LLM response."""
 
     pass
 
 
-class ValidationError(BearBotError):
+class ValidationError(CastorError):
     """Error validating forecast."""
 
     pass

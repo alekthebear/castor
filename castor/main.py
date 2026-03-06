@@ -6,7 +6,7 @@ import argparse
 import asyncio
 from datetime import datetime, timezone
 
-from langfuse import get_client, observe
+from langfuse import get_client
 
 from castor.clients import MetaculusClient
 from castor.clients.llm import create_llm_client
@@ -69,15 +69,11 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-@observe(name="castor-run")
 async def run_forecast(args: argparse.Namespace) -> None:
     """Main function to run the forecasting bot."""
     # Setup logging
     logger = setup_logging(log_level="INFO")
     logger.info("Starting Castor forecasting system")
-
-    # Setup OpenTelemetry for non-OpenAI providers
-    setup_otel_langfuse()
 
     # Initialize clients
     logger.info("Initializing clients...")
@@ -140,6 +136,13 @@ async def run_forecast(args: argparse.Namespace) -> None:
 
     logger.info(f"Forecasting {len(open_question_id_post_id)} questions")
 
+    if not open_question_id_post_id:
+        logger.info("No questions to forecast")
+        return
+
+    # Setup OpenTelemetry for Langfuse tracing
+    setup_otel_langfuse()
+
     # Determine settings from command-line args
     submit_prediction = args.submit
     num_runs_per_question = args.num_runs
@@ -148,14 +151,11 @@ async def run_forecast(args: argparse.Namespace) -> None:
         open_question_id_post_id=open_question_id_post_id,
         submit_prediction=submit_prediction,
         num_runs_per_question=num_runs_per_question,
+        tournament_id=args.tournament,
     )
 
-    # Flush Langfuse traces
     if settings.langfuse_enabled:
-        langfuse_client = get_client()
-        trace_url = langfuse_client.get_trace_url()
-        langfuse_client.flush()
-        logger.info(f"Langfuse trace: {trace_url}")
+        get_client().flush()
 
     logger.info("Forecasting completed successfully")
 
