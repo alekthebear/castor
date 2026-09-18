@@ -8,6 +8,7 @@ from castor.clients.llm.anthropic import AnthropicClient
 from castor.clients.llm.base import LLMClient
 from castor.clients.llm.gemini import GeminiClient
 from castor.clients.llm.openai import OpenAIClient
+from castor.clients.llm.traced import TracedLLMClient
 from castor.config.settings import settings
 
 
@@ -42,5 +43,6 @@ __all__ = [
     "OpenAIClient",
     "AnthropicClient",
     "GeminiClient",
+    "TracedLLMClient",
     "create_llm_client",
 ]

@@ -7,12 +7,12 @@ import datetime
 import re
 
 import numpy as np
-from langfuse import observe
 
 from castor.clients.llm import LLMClient
 from castor.exceptions import ParseError
 from castor.models.distribution import NumericDistribution, Percentile
 from castor.research import Researcher
+from castor.tracing import artifact, step
 
 # Prompt template
 NUMERIC_PROMPT_TEMPLATE = """
@@ -87,13 +87,12 @@ class NumericForecaster:
         self.llm = llm_client
         self.research = researcher
 
-    @observe(name="numeric-forecaster", capture_input=False)
-    async def forecast(self, question_details: dict, num_runs: int) -> tuple[list[float], str]:
+    async def forecast(self, question_details: dict, num_samples: int) -> tuple[list[float], str]:
         """Generate a numeric/discrete forecast.
 
         Args:
             question_details: Question details from Metaculus API.
-            num_runs: Number of forecast runs to perform (median is returned).
+            num_samples: Number of Samples to draw (median is returned).
 
         Returns:
             Tuple of (CDF as list of floats, comment string).
@@ -138,54 +137,62 @@ class NumericForecaster:
 
         summary_report = self.research.research(title)
 
-        content = NUMERIC_PROMPT_TEMPLATE.format(
-            title=title,
-            today=today,
-            background=background,
-            resolution_criteria=resolution_criteria,
-            fine_print=fine_print,
-            summary_report=summary_report,
-            lower_bound_message=lower_bound_message,
-            upper_bound_message=upper_bound_message,
-            units=unit_of_measure,
-        )
+        with step("build-prompt"):
+            content = NUMERIC_PROMPT_TEMPLATE.format(
+                title=title,
+                today=today,
+                background=background,
+                resolution_criteria=resolution_criteria,
+                fine_print=fine_print,
+                summary_report=summary_report,
+                lower_bound_message=lower_bound_message,
+                upper_bound_message=upper_bound_message,
+                units=unit_of_measure,
+            )
+            artifact("prompt", content)
 
         async def ask_llm_to_get_cdf_with_index(i: int, content: str) -> tuple[list[float], str]:
-            rationale = await self.llm.call(
-                content,
-                trace_name="numeric-llm-call",
-                trace_metadata={"question_type": "numeric", "run": i + 1},
-            )
-            percentile_values = self._extract_percentiles(rationale)
+            with step(f"sample-{i + 1}"):
+                rationale = await self.llm.call(
+                    content,
+                    trace_name="numeric-llm-call",
+                    trace_metadata={"question_type": "numeric", "sample": i + 1},
+                )
+                percentile_values = self._extract_percentiles(rationale)
+                artifact("extracted_value", percentile_values)
 
-            comment = (
-                f"Extracted Percentile_values: {percentile_values}\n\nGPT's Answer: "
-                f"{rationale}\n\n\n"
-            )
+                comment = (
+                    f"Extracted Percentile_values: {percentile_values}\n\nGPT's Answer: "
+                    f"{rationale}\n\n\n"
+                )
 
-            cdf = self._generate_continuous_cdf(
-                percentile_values,
-                question_type,
-                open_upper_bound,
-                open_lower_bound,
-                upper_bound,
-                lower_bound,
-                zero_point,
-                cdf_size,
-            )
+                cdf = self._generate_continuous_cdf(
+                    percentile_values,
+                    question_type,
+                    open_upper_bound,
+                    open_lower_bound,
+                    upper_bound,
+                    lower_bound,
+                    zero_point,
+                    cdf_size,
+                )
+                artifact("cdf", cdf)
 
-            return cdf, comment
+                return cdf, comment
 
         cdf_and_comment_pairs = await asyncio.gather(
-            *[ask_llm_to_get_cdf_with_index(i, content) for i in range(num_runs)]
+            *[ask_llm_to_get_cdf_with_index(i, content) for i in range(num_samples)]
         )
-        comments = [pair[1] for pair in cdf_and_comment_pairs]
-        final_comment_sections = [
-            f"## Rationale {i + 1}\n{comment}" for i, comment in enumerate(comments)
-        ]
-        cdfs: list[list[float]] = [pair[0] for pair in cdf_and_comment_pairs]
-        all_cdfs = np.array(cdfs)
-        median_cdf: list[float] = np.median(all_cdfs, axis=0).tolist()
+        with step("aggregate", method="median"):
+            comments = [pair[1] for pair in cdf_and_comment_pairs]
+            final_comment_sections = [
+                f"## Rationale {i + 1}\n{comment}" for i, comment in enumerate(comments)
+            ]
+            cdfs: list[list[float]] = [pair[0] for pair in cdf_and_comment_pairs]
+            artifact("sample_values", cdfs, role="input")
+            all_cdfs = np.array(cdfs)
+            median_cdf: list[float] = np.median(all_cdfs, axis=0).tolist()
+            artifact("forecast", median_cdf)
 
         final_comment = f"Median CDF: `{str(median_cdf)[:100]}...`\n\n" + "\n\n".join(
             final_comment_sections

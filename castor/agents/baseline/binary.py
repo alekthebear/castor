@@ -7,11 +7,11 @@ import datetime
 import re
 
 import numpy as np
-from langfuse import observe
 
 from castor.clients.llm import LLMClient
 from castor.exceptions import ParseError
 from castor.research import Researcher
+from castor.tracing import artifact, step
 
 # Prompt template
 BINARY_PROMPT_TEMPLATE = """
@@ -66,15 +66,14 @@ class BinaryForecaster:
         self.llm = llm_client
         self.research = researcher
 
-    @observe(name="binary-forecaster", capture_input=False)
     async def forecast(
-        self, question_details: dict, num_runs: int
+        self, question_details: dict, num_samples: int
     ) -> tuple[float, str]:
         """Generate a binary forecast.
 
         Args:
             question_details: Question details from Metaculus API.
-            num_runs: Number of forecast runs to perform (median is returned).
+            num_samples: Number of Samples to draw (median is returned).
 
         Returns:
             Tuple of (probability as decimal 0-1, comment string).
@@ -87,43 +86,50 @@ class BinaryForecaster:
 
         summary_report = self.research.research(title)
 
-        content = BINARY_PROMPT_TEMPLATE.format(
-            title=title,
-            today=today,
-            background=background,
-            resolution_criteria=resolution_criteria,
-            fine_print=fine_print,
-            summary_report=summary_report,
-        )
+        with step("build-prompt"):
+            content = BINARY_PROMPT_TEMPLATE.format(
+                title=title,
+                today=today,
+                background=background,
+                resolution_criteria=resolution_criteria,
+                fine_print=fine_print,
+                summary_report=summary_report,
+            )
+            artifact("prompt", content)
 
         async def get_rationale_and_probability_with_index(
             i: int, content: str
         ) -> tuple[float, str]:
-            rationale = await self.llm.call(
-                content,
-                trace_name="binary-llm-call",
-                trace_metadata={"question_type": "binary", "run": i + 1},
-            )
+            with step(f"sample-{i + 1}"):
+                rationale = await self.llm.call(
+                    content,
+                    trace_name="binary-llm-call",
+                    trace_metadata={"question_type": "binary", "sample": i + 1},
+                )
 
-            probability = self._extract_probability(rationale)
-            comment = (
-                f"Extracted Probability: {probability}%\n\nGPT's Answer: "
-                f"{rationale}\n\n\n"
-            )
-            return probability, comment
+                probability = self._extract_probability(rationale)
+                artifact("extracted_value", probability)
+                comment = (
+                    f"Extracted Probability: {probability}%\n\nGPT's Answer: "
+                    f"{rationale}\n\n\n"
+                )
+                return probability, comment
 
         probability_and_comment_pairs = await asyncio.gather(
             *[
                 get_rationale_and_probability_with_index(i, content)
-                for i in range(num_runs)
+                for i in range(num_samples)
             ]
         )
-        comments = [pair[1] for pair in probability_and_comment_pairs]
-        final_comment_sections = [
-            f"## Rationale {i+1}\n{comment}" for i, comment in enumerate(comments)
-        ]
-        probabilities = [pair[0] for pair in probability_and_comment_pairs]
-        median_probability = float(np.median(probabilities)) / 100
+        with step("aggregate", method="median"):
+            comments = [pair[1] for pair in probability_and_comment_pairs]
+            final_comment_sections = [
+                f"## Rationale {i+1}\n{comment}" for i, comment in enumerate(comments)
+            ]
+            probabilities = [pair[0] for pair in probability_and_comment_pairs]
+            artifact("sample_values", probabilities, role="input")
+            median_probability = float(np.median(probabilities)) / 100
+            artifact("forecast", median_probability)
 
         final_comment = f"Median Probability: {median_probability}\n\n" + "\n\n".join(
             final_comment_sections

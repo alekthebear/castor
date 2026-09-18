@@ -1,7 +1,7 @@
 # Forecast Tracking UI
 
 **Date**: September 18, 2026
-**Status**: Designed, not started
+**Status**: Phase 1 (Record) implemented; Phase 2 (Score) next
 
 Terms in **bold** are defined in [CONTEXT.md](CONTEXT.md). Deferred items live in [backlog.md](backlog.md).
 
@@ -60,3 +60,16 @@ Rejected:
 
 - **Overview**: one row per Question, 2–3 lines tall: question snippet, type-aware Forecast summary (binary `73%`; multiple choice top options; numeric median with 80% interval and unit), spot peer score, Metaculus link. Summaries are computed when a run is recorded.
 - **Detail**: the Question, every Forecast Run with its Step tree (timestamps and ordering preserved), and scores.
+
+## Phase 1 notes
+
+- Recording works with any SQLAlchemy URL: Supabase Postgres in prod, a sqlite file (`DATABASE_URL=sqlite:///castor.db`) locally.
+- Step tree for the baseline Agent: `forecast-run` > `fetch-question`, `agent` (> `research`, `build-prompt`, `sample-N` > `llm-call`, `aggregate`), `submit`.
+- Manual workflow runs are tagged Dev, even when they submit; only the scheduled job is Prod.
+
+### Setup (one-time)
+
+1. Create a Supabase project. Copy the **Session pooler** connection string (the direct connection is IPv6-only, which GitHub Actions can't reach).
+2. Run `DATABASE_URL=<url> uv run alembic upgrade head`.
+3. Add `DATABASE_URL` as a GitHub Actions secret (and to `.env` for local runs).
+4. Optionally rename the repo variable `NUM_RUNS` to `NUM_SAMPLES` (the workflow falls back to `NUM_RUNS`) and set `AGENT` (defaults to `baseline`).

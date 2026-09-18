@@ -15,3 +15,6 @@ wheels/
 
 # agent files
 .claude/settings.local.json
+
+# local run databases
+*.db

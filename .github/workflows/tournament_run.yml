@@ -37,5 +37,9 @@ jobs:
           LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
           LANGFUSE_BASE_URL: ${{ secrets.LANGFUSE_BASE_URL }}
           LANGFUSE_TRACING_ENVIRONMENT: ${{ vars.LANGFUSE_TRACING_ENVIRONMENT }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          CASTOR_ENV: prod
         run: |
-          uv run castor --tournament ${{ vars.TOURNAMENT_ID }} --submit --num-runs ${{ vars.NUM_RUNS }}
+          uv run castor --tournament ${{ vars.TOURNAMENT_ID }} --submit \
+            --agent ${{ vars.AGENT || 'baseline' }} \
+            --num-samples ${{ vars.NUM_SAMPLES || vars.NUM_RUNS }}
