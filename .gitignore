@@ -13,5 +13,5 @@ wheels/
 # secrets
 .env
 
-# .claude
+# agent files
 .claude/settings.local.json

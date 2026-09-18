@@ -58,3 +58,15 @@ uv run mypy castor
 ## CI/CD
 
 GitHub Actions runs every 30 minutes (`.github/workflows/tournament_run.yml`) to forecast tournament questions automatically.
+
+## Docs (`.agent/docs/`)
+
+All design docs live flat in `.agent/docs/`:
+
+- `CONTEXT.md`: domain glossary (Question, Agent, Forecast Run, Step, ...). Use these terms in code, docs, and conversation; update it when a term is added or changes meaning. Definitions only, no implementation details.
+- `backlog.md`: deferred ideas and open design questions, one bullet each.
+- `YYYYMMDD_<topic>.md`: one doc per body of work (plan, design decisions and why, status), dated when the work started. Update its status as work progresses rather than creating a new doc.
+
+## Code Style
+
+- **Comments**: Keep them short and succinct. Describe the general rule or intent, not the specific bug or example that prompted the code.
