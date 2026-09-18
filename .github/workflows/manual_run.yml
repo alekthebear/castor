@@ -29,8 +29,13 @@ on:
         required: false
         type: boolean
         default: false
-      num_runs:
-        description: 'Number of runs per question'
+      agent:
+        description: 'Agent that produces the forecast'
+        required: false
+        type: string
+        default: 'baseline'
+      num_samples:
+        description: 'Number of Samples per question'
         required: false
         type: number
         default: 3
@@ -66,11 +71,13 @@ jobs:
           LANGFUSE_SECRET_KEY: ${{ secrets.LANGFUSE_SECRET_KEY }}
           LANGFUSE_PUBLIC_KEY: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
           LANGFUSE_BASE_URL: ${{ secrets.LANGFUSE_BASE_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          CASTOR_ENV: dev
         run: |
           ARGS=""
 
           if [ "${{ inputs.mode }}" = "question" ]; then
-            ARGS="--question ${{ inputs.id }}"
+            ARGS="--post ${{ inputs.id }}"
           else
             ARGS="--tournament ${{ inputs.id }}"
           fi
@@ -83,7 +90,7 @@ jobs:
             ARGS="$ARGS --force"
           fi
 
-          ARGS="$ARGS --num-runs ${{ inputs.num_runs }}"
+          ARGS="$ARGS --agent ${{ inputs.agent }} --num-samples ${{ inputs.num_samples }}"
 
           echo "Running: uv run castor $ARGS"
           uv run castor $ARGS

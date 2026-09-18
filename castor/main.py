@@ -8,11 +8,10 @@ from datetime import datetime, timezone
 
 from langfuse import get_client
 
+from castor.agents import AGENTS, DEFAULT_AGENT, create_agent
 from castor.clients import MetaculusClient
-from castor.clients.llm import create_llm_client
 from castor.config.settings import settings
-from castor.forecasting import Forecaster
-from castor.research import Researcher
+from castor.runner import ForecastRunner
 from castor.utils import setup_logging
 from castor.utils.telemetry import setup_otel_langfuse
 
@@ -54,16 +53,30 @@ def parse_args() -> argparse.Namespace:
         help="Rerun forecast even if previously forecasted (default: False)",
     )
     parser.add_argument(
+        "-a",
+        "--agent",
+        choices=list(AGENTS),
+        default=DEFAULT_AGENT,
+        help=f"Agent that produces the forecast (default: {DEFAULT_AGENT})",
+    )
+    parser.add_argument(
         "-n",
-        "--num-runs",
+        "--num-samples",
+        "--num-runs",  # deprecated alias
+        dest="num_samples",
         type=int,
-        default=3,
-        help="Number of runs per question (default: 3)",
+        default=None,
+        help="Number of Samples per question, for Agents that sample (default: 3)",
     )
     parser.add_argument(
         "--provider",
         choices=["openai", "anthropic", "gemini"],
         help="LLM provider (overrides LLM_PROVIDER env var)",
+    )
+    parser.add_argument(
+        "--no-record",
+        action="store_true",
+        help="Do not record Forecast Runs to the database",
     )
 
     return parser.parse_args()
@@ -78,12 +91,12 @@ async def run_forecast(args: argparse.Namespace) -> None:
     # Initialize clients
     logger.info("Initializing clients...")
     metaculus_client = MetaculusClient()
-    llm_client = create_llm_client(provider=args.provider)
-    researcher = Researcher()
-    forecaster = Forecaster(
+    agent = create_agent(args.agent, provider=args.provider, num_samples=args.num_samples)
+    runner = ForecastRunner(
         metaculus_client=metaculus_client,
-        llm_client=llm_client,
-        researcher=researcher,
+        agent=agent,
+        record=not args.no_record,
+        tournament=args.tournament,
     )
 
     # Get questions to forecast
@@ -143,16 +156,7 @@ async def run_forecast(args: argparse.Namespace) -> None:
     # Setup OpenTelemetry for Langfuse tracing
     setup_otel_langfuse()
 
-    # Determine settings from command-line args
-    submit_prediction = args.submit
-    num_runs_per_question = args.num_runs
-
-    await forecaster.forecast_questions(
-        open_question_id_post_id=open_question_id_post_id,
-        submit_prediction=submit_prediction,
-        num_runs_per_question=num_runs_per_question,
-        tournament_id=args.tournament,
-    )
+    await runner.forecast_questions(open_question_id_post_id, submit=args.submit)
 
     if settings.langfuse_enabled:
         get_client().flush()

@@ -13,5 +13,8 @@ wheels/
 # secrets
 .env
 
-# .claude
+# agent files
 .claude/settings.local.json
+
+# local run databases
+*.db

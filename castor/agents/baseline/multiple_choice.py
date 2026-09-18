@@ -6,11 +6,10 @@ import asyncio
 import datetime
 import re
 
-from langfuse import observe
-
 from castor.clients.llm import LLMClient
 from castor.exceptions import ParseError
 from castor.research import Researcher
+from castor.tracing import artifact, step
 
 # Prompt template
 MULTIPLE_CHOICE_PROMPT_TEMPLATE = """
@@ -69,17 +68,16 @@ class MultipleChoiceForecaster:
         self.llm = llm_client
         self.research = researcher
 
-    @observe(name="multiple-choice-forecaster", capture_input=False)
     async def forecast(
         self,
         question_details: dict,
-        num_runs: int,
+        num_samples: int,
     ) -> tuple[dict[str, float], str]:
         """Generate a multiple choice forecast.
 
         Args:
             question_details: Question details from Metaculus API.
-            num_runs: Number of forecast runs to perform (average is returned).
+            num_samples: Number of Samples to draw (average is returned).
 
         Returns:
             Tuple of (dict mapping options to probabilities, comment string).
@@ -93,58 +91,66 @@ class MultipleChoiceForecaster:
 
         summary_report = self.research.research(title)
 
-        content = MULTIPLE_CHOICE_PROMPT_TEMPLATE.format(
-            title=title,
-            today=today,
-            background=background,
-            resolution_criteria=resolution_criteria,
-            fine_print=fine_print,
-            summary_report=summary_report,
-            options=options,
-        )
+        with step("build-prompt"):
+            content = MULTIPLE_CHOICE_PROMPT_TEMPLATE.format(
+                title=title,
+                today=today,
+                background=background,
+                resolution_criteria=resolution_criteria,
+                fine_print=fine_print,
+                summary_report=summary_report,
+                options=options,
+            )
+            artifact("prompt", content)
 
         async def ask_llm_for_multiple_choice_probabilities_with_index(
             i: int, content: str
         ) -> tuple[dict[str, float], str]:
-            rationale = await self.llm.call(
-                content,
-                trace_name="multiple-choice-llm-call",
-                trace_metadata={"question_type": "multiple_choice", "run": i + 1},
-            )
+            with step(f"sample-{i + 1}"):
+                rationale = await self.llm.call(
+                    content,
+                    trace_name="multiple-choice-llm-call",
+                    trace_metadata={"question_type": "multiple_choice", "sample": i + 1},
+                )
 
-            option_probabilities = self._extract_option_probabilities(rationale, options)
+                option_probabilities = self._extract_option_probabilities(rationale, options)
+                artifact("extracted_value", option_probabilities)
 
-            comment = (
-                f"EXTRACTED_PROBABILITIES: {option_probabilities}\n\nGPT's Answer: "
-                f"{rationale}\n\n\n"
-            )
+                comment = (
+                    f"EXTRACTED_PROBABILITIES: {option_probabilities}\n\nGPT's Answer: "
+                    f"{rationale}\n\n\n"
+                )
 
-            probability_yes_per_category = self._generate_multiple_choice_forecast(
-                options, option_probabilities
-            )
-            return probability_yes_per_category, comment
+                probability_yes_per_category = self._generate_multiple_choice_forecast(
+                    options, option_probabilities
+                )
+                artifact("probabilities", probability_yes_per_category)
+                return probability_yes_per_category, comment
 
         probability_yes_per_category_and_comment_pairs = await asyncio.gather(
             *[
                 ask_llm_for_multiple_choice_probabilities_with_index(i, content)
-                for i in range(num_runs)
+                for i in range(num_samples)
             ]
         )
-        comments = [pair[1] for pair in probability_yes_per_category_and_comment_pairs]
-        final_comment_sections = [
-            f"## Rationale {i+1}\n{comment}" for i, comment in enumerate(comments)
-        ]
-        probability_yes_per_category_dicts: list[dict[str, float]] = [
-            pair[0] for pair in probability_yes_per_category_and_comment_pairs
-        ]
-        average_probability_yes_per_category: dict[str, float] = {}
-        for option in options:
-            probabilities_for_current_option: list[float] = [
-                dict[option] for dict in probability_yes_per_category_dicts
+        with step("aggregate", method="mean"):
+            comments = [pair[1] for pair in probability_yes_per_category_and_comment_pairs]
+            final_comment_sections = [
+                f"## Rationale {i+1}\n{comment}" for i, comment in enumerate(comments)
             ]
-            average_probability_yes_per_category[option] = sum(
-                probabilities_for_current_option
-            ) / len(probabilities_for_current_option)
+            probability_yes_per_category_dicts: list[dict[str, float]] = [
+                pair[0] for pair in probability_yes_per_category_and_comment_pairs
+            ]
+            artifact("sample_values", probability_yes_per_category_dicts, role="input")
+            average_probability_yes_per_category: dict[str, float] = {}
+            for option in options:
+                probabilities_for_current_option: list[float] = [
+                    dict[option] for dict in probability_yes_per_category_dicts
+                ]
+                average_probability_yes_per_category[option] = sum(
+                    probabilities_for_current_option
+                ) / len(probabilities_for_current_option)
+            artifact("forecast", average_probability_yes_per_category)
 
         final_comment = (
             f"Average Probability Yes Per Category: `{average_probability_yes_per_category}`\n\n"

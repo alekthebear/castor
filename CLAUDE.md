@@ -13,9 +13,17 @@ Castor is an AI-powered forecasting bot for Metaculus. It uses LLMs (OpenAI, Ant
 uv sync
 
 # Run forecaster
-uv run castor --tournament <id> --submit --num-runs 5
+uv run castor --tournament <id> --submit --num-samples 5
 uv run castor --post <id> --submit
 uv run castor --post <id> --provider anthropic  # Override LLM provider
+uv run castor --post <id> --agent baseline --no-record
+
+# Database migrations (uses DATABASE_URL)
+uv run alembic upgrade head
+uv run alembic revision --autogenerate -m "<change>"
+
+# Tests
+uv run pytest
 
 # Linting and type checking
 uv run ruff check castor
@@ -30,19 +38,24 @@ uv run mypy castor
 - **Providers**: OpenAI, Anthropic, Gemini with per-provider instrumentation
 - **Configuration**: `LLM_PROVIDER` env var ("openai" | "anthropic" | "gemini")
 
-### Forecasting Pipeline (`castor/forecasting/`)
-- `forecaster.py`: Main orchestrator that determines question type and dispatches
-- `binary.py`, `numeric.py`, `multiple_choice.py`: Type-specific forecasters
-- Multi-run support: Runs N forecasts and returns median/aggregated result
+### Agents (`castor/agents/`)
+- An Agent turns a Question into a Forecast (`Agent` protocol in `base.py`); register new ones in `AGENTS` in `__init__.py` and select with `--agent`
+- `baseline/`: research once, draw N Samples from one prompt, aggregate (median/mean); type-specific logic in `binary.py`, `numeric.py`, `multiple_choice.py`
+
+### Runner (`castor/runner.py`)
+- Fetches the Question, runs the Agent, submits, and records the Forecast Run (also when it fails)
+
+### Tracing and storage (`castor/tracing/`, `castor/storage/`)
+- Wrap units of work in `with step("name", **metadata):` and attach content with `artifact(kind, content, role=...)`; Steps nest and are mirrored to Langfuse
+- `TracedLLMClient` records every LLM call's prompt and response as a Step
+- Forecast Runs are written once at the end to the database at `DATABASE_URL` (Supabase Postgres in prod, sqlite works locally); schema in `storage/models.py`, migrations in `migrations/`
 
 ### Research Integration (`castor/research/`)
 - Auto-selects best available provider: AskNews > Exa > Perplexity > None
 - Falls back gracefully if no research providers configured
 
 ### Observability (`castor/utils/telemetry.py`)
-- Langfuse integration with OpenTelemetry
-- Use `@observe(name="span-name")` decorator for tracing
-- Span naming: "castor-run", "forecast-batch", "forecast-question", etc.
+- Langfuse integration with OpenTelemetry; spans come from `step()` and the LLM SDK instrumentors
 
 ### Configuration (`castor/config/settings.py`)
 - Pydantic `BaseSettings` loading from `.env` then environment variables
@@ -58,3 +71,15 @@ uv run mypy castor
 ## CI/CD
 
 GitHub Actions runs every 30 minutes (`.github/workflows/tournament_run.yml`) to forecast tournament questions automatically.
+
+## Docs (`.agent/docs/`)
+
+All design docs live flat in `.agent/docs/`:
+
+- `CONTEXT.md`: domain glossary (Question, Agent, Forecast Run, Step, ...). Use these terms in code, docs, and conversation; update it when a term is added or changes meaning. Definitions only, no implementation details.
+- `backlog.md`: deferred ideas and open design questions, one bullet each.
+- `YYYYMMDD_<topic>.md`: one doc per body of work (plan, design decisions and why, status), dated when the work started. Update its status as work progresses rather than creating a new doc.
+
+## Code Style
+
+- **Comments**: Keep them short and succinct. Describe the general rule or intent, not the specific bug or example that prompted the code.

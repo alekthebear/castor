@@ -7,10 +7,10 @@ import asyncio
 import forecasting_tools
 import requests
 from asknews_sdk import AskNewsSDK
-from langfuse import observe
 
 from castor.config.settings import settings
 from castor.exceptions import ResearchError
+from castor.tracing import artifact, step
 
 
 class Researcher:
@@ -31,7 +31,6 @@ class Researcher:
         else:
             return "none"
 
-    @observe(as_type="span", name="research")
     def research(self, question: str) -> str:
         """Conduct research on a question.
 
@@ -41,6 +40,13 @@ class Researcher:
         Returns:
             Research findings as a string.
         """
+        with step("research", provider=self.provider):
+            artifact("query", question, role="input")
+            report = self._research(question)
+            artifact("research_report", report)
+            return report
+
+    def _research(self, question: str) -> str:
         if self.provider == "asknews":
             return self._call_asknews(question)
         elif self.provider == "exa":

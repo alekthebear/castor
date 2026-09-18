@@ -64,6 +64,19 @@ class Settings(BaseSettings):
         description="Metaculus API base URL",
     )
 
+    # Run recording
+    database_url: Optional[str] = Field(
+        default=None,
+        description="SQLAlchemy URL for recording Forecast Runs (Postgres in prod; "
+        "sqlite works locally). Recording is skipped when unset.",
+        alias="DATABASE_URL",
+    )
+    castor_env: str = Field(
+        default="dev",
+        description="Environment tag for Forecast Runs: dev or prod",
+        alias="CASTOR_ENV",
+    )
+
     # Tournament Configuration
     forecast_window_before_close: Optional[int] = Field(
         default=12,
